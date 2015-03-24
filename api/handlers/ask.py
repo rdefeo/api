@@ -9,8 +9,8 @@ from api.settings import DETECT_URL, SUGGEST_URL, CONTEXT_URL
 
 
 class Ask(RequestHandler):
-    def initialize(self):
-        pass
+    def initialize(self, content):
+        self.content = content
 
     def on_finish(self):
         pass
@@ -118,7 +118,7 @@ class Ask(RequestHandler):
 
 
             suggest_response = self.get_suggestion(user_id, session_id, locale, page, page_size, context)
-
+            suggestions = list(self.fill_suggestions(suggest_response["suggestions"]))
 
             self.set_header(
                 "Link",
@@ -135,10 +135,17 @@ class Ask(RequestHandler):
             )
             self.finish(
                 {
-                    "suggestions": suggest_response["suggestions"]
+                    "suggestions": suggestions
                 }
             )
             pass
+
+    def fill_suggestions(self, suggestions):
+        for x in suggestions:
+            y = self.content.product_cache(x["_id"])
+            y["score"] = x["score"]
+            y["_id"] = x["_id"]
+            yield y
 
     def build_header_links(self, session_id, user_id, context_id, locale, page, page_size):
         links = [

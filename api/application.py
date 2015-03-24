@@ -6,12 +6,13 @@ import tornado.web
 import tornado.options
 from tornado.web import url
 from api.handlers.status import Status
+from api.content import Content
 
 
 class Application(tornado.web.Application):
     def __init__(self):
         handlers = [
-            url(r"/ask", Ask, name="ask"),
+            url(r"/ask", Ask, dict(content=Content(4096)), name="ask"),
             # url(r"/proxy.html", Proxy, name="proxy"),
             url(r"/status", Status, name="status")
             # url(r"/refresh", Refresh, name="refresh")
