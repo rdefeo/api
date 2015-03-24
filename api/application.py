@@ -1,3 +1,5 @@
+from api.handlers.ask import Ask
+
 __author__ = 'robdefeo'
 import tornado
 import tornado.web
@@ -9,7 +11,7 @@ from api.handlers.status import Status
 class Application(tornado.web.Application):
     def __init__(self):
         handlers = [
-            # url(r"/", Detect, dict(parse=Parse()), name="detect"),
+            url(r"/ask", Ask, name="ask"),
             # url(r"/proxy.html", Proxy, name="proxy"),
             url(r"/status", Status, name="status")
             # url(r"/refresh", Refresh, name="refresh")
