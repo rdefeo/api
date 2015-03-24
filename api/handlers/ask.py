@@ -15,17 +15,21 @@ class Ask(RequestHandler):
     def on_finish(self):
         pass
 
-    def get_context(self, session_id, user_id, context_id):
+    def get_context(self, session_id, user_id, detection_response, context_id):
         http_client = HTTPClient()
-        if context_id is None:
-            context_response = http_client.fetch(
+        if context_id is None or detection_response is not None:
+            request_body = {}
+            if detection_response is not None:
+                request_body["detection_response"] = detection_response
+
+            response = http_client.fetch(
                 HTTPRequest(
                     url="%s?user_id=%s&session_id=%s" % (CONTEXT_URL, user_id, session_id),
-                    body=json_encode({}),
+                    body=json_encode(request_body),
                     method="POST"
                 )
             )
-            return json_decode(context_response.body)
+            return json_decode(response.body)
         else:
             context_response = http_client.fetch(
                 HTTPRequest(
@@ -34,6 +38,39 @@ class Ask(RequestHandler):
                 )
             )
             return json_decode(context_response.body)
+
+    def get_suggestion(self, user_id, session_id, locale, page, page_size, context):
+        http_client = HTTPClient()
+        suggest_response = http_client.fetch(
+            HTTPRequest(
+                url="%s?user_id=%s&session_id=%s&locale=%s&page=%s&page_size=%s&context=%s" % (
+                    SUGGEST_URL,
+                    user_id,
+                    session_id,
+                    locale,
+                    page,
+                    page_size,
+                    url_escape(json_encode(context))
+                )
+            )
+        )
+        return json_decode(suggest_response.body)
+
+    def get_detection(self, user_id, session_id, locale, query, context):
+        http_client = HTTPClient()
+        response = http_client.fetch(
+            HTTPRequest(
+                url="%s?user_id=%s&session_id=%s&locale=%s&q=%s" % (
+                    DETECT_URL,
+                    user_id,
+                    session_id,
+                    locale,
+                    query
+                    # url_escape(json_encode(context))
+                )
+            )
+        )
+        return json_decode(response.body)
 
     @asynchronous
     @gen.engine
@@ -56,14 +93,6 @@ class Ask(RequestHandler):
                     "message": "missing param=user_id"
                 }
             )
-        elif context_id is not None and query is not None:
-            self.set_status(412)
-            self.finish(
-                {
-                    "status": "error",
-                    "message": "can not combine params=[q,context_id]"
-                }
-            )
         elif session_id is None:
             self.set_status(412)
             self.finish(
@@ -81,31 +110,43 @@ class Ask(RequestHandler):
                 }
             )
         else:
-            detection_response = None
+            context = self.get_context(session_id, user_id, None, context_id)
             if query is not None:
-                raise NotImplemented()
+                detection_response = self.get_detection(user_id, session_id, locale, query, context)
+                # now don't pass the context_id cus for sure it will be replaced by the new detection
+                context = self.get_context(session_id, user_id, detection_response, context_id)
 
-            context = self.get_context(session_id, user_id, context_id)
-            http_client = HTTPClient()
-            suggest_response = http_client.fetch(
-                HTTPRequest(
-                    url="%s?user_id=%s&session_id=%s&locale=%s&page=%s&page_size=%s&context=%s" % (
-                        SUGGEST_URL,
-                        user_id,
+
+            suggest_response = self.get_suggestion(user_id, session_id, locale, page, page_size, context)
+
+
+            self.set_header(
+                "Link",
+                ", ".join(
+                    self.build_header_links(
                         session_id,
+                        user_id,
+                        context["_id"],
                         locale,
                         page,
-                        page_size,
-                        url_escape(json_encode(context))
+                        page_size
                     )
                 )
             )
-            links = [
+            self.finish(
+                {
+                    "suggestions": suggest_response["suggestions"]
+                }
+            )
+            pass
+
+    def build_header_links(self, session_id, user_id, context_id, locale, page, page_size):
+        links = [
                 self.build_header_link(
                     self.build_link(
                         session_id,
                         user_id,
-                        context["_id"],
+                        context_id,
                         locale,
                         page + 1,
                         page_size
@@ -113,16 +154,34 @@ class Ask(RequestHandler):
                     "next"
                 )
             ]
-            self.set_header(
-                "Link",
-                ", ".join(links)
+        if page > 1:
+            links.append(
+                self.build_header_link(
+                    self.build_link(
+                        session_id,
+                        user_id,
+                        context_id,
+                        locale,
+                        page - 1,
+                        page_size
+                    ),
+                    "prev"
+                )
             )
-            self.finish(
-                {
-                    "suggestions": json_decode(suggest_response.body)["suggestions"]
-                }
+            links.append(
+                self.build_header_link(
+                    self.build_link(
+                        session_id,
+                        user_id,
+                        context_id,
+                        locale,
+                        1,
+                        page_size
+                    ),
+                    "first"
+                )
             )
-            pass
+        return links
 
     def build_header_link(self, href, rel):
         return "<%s>; rel=\"%s\"" % (href, rel)
