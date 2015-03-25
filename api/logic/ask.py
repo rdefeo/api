@@ -23,7 +23,7 @@ class Ask(object):
         context, detection_response = self.get_detection_context(context_id, locale, query, session_id, user_id)
 
         suggest_response = self.get_suggestion(user_id, session_id, locale, page, page_size, context)
-        suggestions = list(self.fill_suggestions(suggest_response["suggestions"]))
+        suggestions = self.fill_suggestions(suggest_response["suggestions"])
 
         response = {
             "suggestions": suggestions,
@@ -32,17 +32,23 @@ class Ask(object):
             "context_id": context["_id"]
         }
 
-        if detection_response is not None and "non_detections" in detection_response and any(detection_response["non_detections"]):
-            response["non_detections"] = detection_response["non_detections"]
+        if detection_response is not None:
+            if "non_detections" in detection_response and any(detection_response["non_detections"]):
+                response["non_detections"] = detection_response["non_detections"]
+
+            if "autocorrected" in detection_response:
+                response["autocorrected"] = detection_response["autocorrected"]
 
         return response
 
     def fill_suggestions(self, suggestions):
+        items = []
         for x in suggestions:
             y = self.content.product_cache(x["_id"])
             y["score"] = x["score"]
             y["_id"] = x["_id"]
-            yield y
+            items.append(y)
+        return items
 
     def build_header_link(self, href, rel):
         return "<%s>; rel=\"%s\"" % (href, rel)
