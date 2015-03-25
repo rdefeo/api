@@ -8,12 +8,13 @@ import tornado.options
 from tornado.web import url
 from api.handlers.status import Status
 from api.content import Content
+from api.logic.ask import Ask as AskLogic
 
 
 class Application(tornado.web.Application):
     def __init__(self):
         handlers = [
-            url(r"/ask", Ask, dict(content=Content(4096)), name="ask"),
+            url(r"/ask", Ask, dict(logic=AskLogic(Content(4096))), name="ask"),
             url(r"/proxy.html", Proxy, name="proxy"),
             url(r"/status", Status, name="status")
             # url(r"/refresh", Refresh, name="refresh")
