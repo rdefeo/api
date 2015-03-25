@@ -134,7 +134,7 @@ class Ask(RequestHandler):
                     "suggestions": suggestions,
                     "page": page,
                     "page_size": page_size,
-                    "context_id": context_id
+                    "context_id": context["_id"]
                 }
             )
             pass
