@@ -12,6 +12,9 @@ class Ask(RequestHandler):
     def initialize(self, content):
         self.content = content
 
+    def set_default_headers(self):
+        self.set_header("Access-Control-Allow-Origin", "*")
+
     def on_finish(self):
         pass
 
@@ -65,9 +68,10 @@ class Ask(RequestHandler):
                     user_id,
                     session_id,
                     locale,
-                    query
+                    url_escape(query)
                     # url_escape(json_encode(context))
                 )
+
             )
         )
         return json_decode(response.body)
@@ -77,7 +81,7 @@ class Ask(RequestHandler):
     def get(self):
         self.set_header('Content-Type', 'application/json')
 
-        user_id = self.get_argument("user_id", None)
+        user_id = self.get_argument("user_id", "None")
         context_id = self.get_argument("context_id", None)
         session_id = self.get_argument("session_id", None)
         locale = self.get_argument("locale", None)
@@ -85,15 +89,7 @@ class Ask(RequestHandler):
         page = int(self.get_argument("page", 1))
         page_size = int(self.get_argument("page_size", 10))
 
-        if user_id is None:
-            self.set_status(412)
-            self.finish(
-                {
-                    "status": "error",
-                    "message": "missing param=user_id"
-                }
-            )
-        elif session_id is None:
+        if session_id is None:
             self.set_status(412)
             self.finish(
                 {
@@ -116,10 +112,10 @@ class Ask(RequestHandler):
                 # now don't pass the context_id cus for sure it will be replaced by the new detection
                 context = self.get_context(session_id, user_id, detection_response, context_id)
 
-
             suggest_response = self.get_suggestion(user_id, session_id, locale, page, page_size, context)
             suggestions = list(self.fill_suggestions(suggest_response["suggestions"]))
 
+            self.set_status(200)
             self.set_header(
                 "Link",
                 ", ".join(
@@ -135,7 +131,10 @@ class Ask(RequestHandler):
             )
             self.finish(
                 {
-                    "suggestions": suggestions
+                    "suggestions": suggestions,
+                    "page": page,
+                    "page_size": page_size,
+                    "context_id": context_id
                 }
             )
             pass
