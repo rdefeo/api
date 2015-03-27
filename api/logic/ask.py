@@ -9,20 +9,20 @@ class Ask(object):
     def __init__(self, content):
         self.content = content
 
-    def get_detection_context(self, context_id, locale, query, session_id, user_id):
-        context = self.get_context(session_id, user_id, None, context_id)
+    def get_detection_context(self, user_id, application_id, session_id, context_id, locale, query, skip_mongodb_log):
+        context = self.get_context(user_id, application_id, session_id, locale, None, context_id, skip_mongodb_log)
         if query is not None:
-            detection_response = self.get_detection(user_id, session_id, locale, query, context)
+            detection_response = self.get_detection(user_id, application_id, session_id, locale, query, context)
             # now don't pass the context_id cus for sure it will be replaced by the new detection
-            context = self.get_context(session_id, user_id, detection_response, context_id)
+            context = self.get_context(user_id, application_id, session_id, locale, detection_response, context_id, skip_mongodb_log)
             return context, detection_response
         else:
             return context, None
 
-    def do(self, user_id, session_id, context_id, query, locale, page, page_size):
-        context, detection_response = self.get_detection_context(context_id, locale, query, session_id, user_id)
+    def do(self, user_id, application_id, session_id, context_id, query, locale, page, page_size, skip_mongodb_log):
+        context, detection_response = self.get_detection_context(user_id, application_id, session_id, context_id, locale, query, skip_mongodb_log)
 
-        suggest_response = self.get_suggestion(user_id, session_id, locale, page, page_size, context)
+        suggest_response = self.get_suggestion(user_id, application_id, session_id, locale, page, page_size, context, skip_mongodb_log)
         suggestions = self.fill_suggestions(suggest_response["suggestions"])
 
         response = {
@@ -53,11 +53,12 @@ class Ask(object):
     def build_header_link(self, href, rel):
         return "<%s>; rel=\"%s\"" % (href, rel)
 
-    def build_header_links(self, host, path, session_id, user_id, context_id, locale, page, page_size):
+    def build_header_links(self, host, path, user_id, application_id, session_id, context_id, locale, page, page_size):
         links = [
             self.build_header_link(
                 self.build_link(
                     host, path,
+                    application_id,
                     session_id,
                     user_id,
                     context_id,
@@ -73,6 +74,7 @@ class Ask(object):
                 self.build_header_link(
                     self.build_link(
                         host, path,
+                        application_id,
                         session_id,
                         user_id,
                         context_id,
@@ -87,6 +89,7 @@ class Ask(object):
                 self.build_header_link(
                     self.build_link(
                         host, path,
+                        application_id,
                         session_id,
                         user_id,
                         context_id,
@@ -99,10 +102,11 @@ class Ask(object):
             )
         return links
 
-    def build_link(self, host, path, session_id, user_id, context_id, locale, new_page, page_size):
-        return "http://%s%s?session_id=%s&user_id=%s&context_id=%s&locale=%s&page=%s&page_size=%s" % (
+    def build_link(self, host, path, user_id, application_id, session_id,  context_id, locale, new_page, page_size):
+        return "http://%s%s?application_id=%s&session_id=%s&user_id=%s&context_id=%s&locale=%s&page=%s&page_size=%s" % (
             host,
             path,
+            application_id,
             session_id,
             user_id,
             context_id,
@@ -111,16 +115,21 @@ class Ask(object):
             page_size
         )
 
-    def get_context(self, session_id, user_id, detection_response, context_id):
+    def get_context(self, user_id, application_id, session_id, locale, detection_response, context_id, skip_mongodb_log):
         http_client = HTTPClient()
         if context_id is None or detection_response is not None:
             request_body = {}
             if detection_response is not None:
                 request_body["detection_response"] = detection_response
+            url = "%s?user_id=%s&session_id=%s&application_id=%s&locale=%s" % (
+                CONTEXT_URL, user_id, session_id, application_id, locale
+            )
+            if skip_mongodb_log:
+                url += "&skip_mongodb_log"
 
             response = http_client.fetch(
                 HTTPRequest(
-                    url="%s?user_id=%s&session_id=%s" % (CONTEXT_URL, user_id, session_id),
+                    url=url,
                     body=json_encode(request_body),
                     method="POST"
                 )
@@ -135,29 +144,34 @@ class Ask(object):
             )
             return json_decode(context_response.body)
 
-    def get_suggestion(self, user_id, session_id, locale, page, page_size, context):
+    def get_suggestion(self, user_id, application_id, session_id, locale, page, page_size, context, skip_mongodb_log):
+        url = "%s?user_id=%s&application_id=%s&session_id=%s&locale=%s&page=%s&page_size=%s&context=%s" % (
+            SUGGEST_URL,
+            user_id,
+            application_id,
+            session_id,
+            locale,
+            page,
+            page_size,
+            url_escape(json_encode(context))
+        )
+        if skip_mongodb_log:
+            url += "&skip_mongodb_log"
         http_client = HTTPClient()
         suggest_response = http_client.fetch(
             HTTPRequest(
-                url="%s?user_id=%s&session_id=%s&locale=%s&page=%s&page_size=%s&context=%s" % (
-                    SUGGEST_URL,
-                    user_id,
-                    session_id,
-                    locale,
-                    page,
-                    page_size,
-                    url_escape(json_encode(context))
-                )
+                url=url
             )
         )
         return json_decode(suggest_response.body)
 
-    def get_detection(self, user_id, session_id, locale, query, context):
+    def get_detection(self, user_id, application_id, session_id, locale, query, context):
         http_client = HTTPClient()
         response = http_client.fetch(
             HTTPRequest(
-                url="%s?user_id=%s&session_id=%s&locale=%s&q=%s" % (
+                url="%s?application_id=%s&user_id=%s&session_id=%s&locale=%s&q=%s" % (
                     DETECT_URL,
+                    application_id,
                     user_id,
                     session_id,
                     locale,

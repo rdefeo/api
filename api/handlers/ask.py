@@ -20,6 +20,7 @@ class Ask(RequestHandler):
         self.set_header('Content-Type', 'application/json')
 
         user_id = self.get_argument("user_id", "None")
+        application_id = self.get_argument("application_id", None)
         context_id = self.get_argument("context_id", None)
         session_id = self.get_argument("session_id", None)
         locale = self.get_argument("locale", None)
@@ -27,7 +28,15 @@ class Ask(RequestHandler):
         page = int(self.get_argument("page", 1))
         page_size = int(self.get_argument("page_size", 10))
 
-        if session_id is None:
+        if application_id is None:
+            self.set_status(412)
+            self.finish(
+                {
+                    "status": "error",
+                    "message": "missing param=application_id"
+                }
+            )
+        elif session_id is None:
             self.set_status(412)
             self.finish(
                 {
@@ -44,7 +53,8 @@ class Ask(RequestHandler):
                 }
             )
         else:
-            response = self.logic.do(user_id, session_id, context_id, query, locale, page, page_size)
+            skip_mongodb_log = self.get_argument("skip_mongodb_log", None) is not None
+            response = self.logic.do(user_id, application_id, session_id, context_id, query, locale, page, page_size, skip_mongodb_log)
             self.set_status(200)
             self.set_header(
                 "Link",
@@ -52,8 +62,9 @@ class Ask(RequestHandler):
                     self.logic.build_header_links(
                         self.request.host,
                         self.request.path,
-                        session_id,
                         user_id,
+                        application_id,
+                        session_id,
                         response["context_id"],
                         locale,
                         page,

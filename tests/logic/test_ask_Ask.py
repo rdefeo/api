@@ -26,12 +26,14 @@ class do_Tests(TestCase):
 
         actual = target.do(
             "user_id",
+            "application_id",
             "session_id",
             "context_id",
             "query",
             "en_UK",
             1,
-            10
+            10,
+            False
         )
 
         self.assertDictEqual(
@@ -51,23 +53,27 @@ class do_Tests(TestCase):
         )
         self.assertEqual(
             target.get_detection_context.call_args_list[0][0][0],
-            'context_id'
+            'user_id'
         )
         self.assertEqual(
             target.get_detection_context.call_args_list[0][0][1],
-            'en_UK'
+            'application_id'
         )
         self.assertEqual(
             target.get_detection_context.call_args_list[0][0][2],
-            'query'
-        )
-        self.assertEqual(
-            target.get_detection_context.call_args_list[0][0][3],
             'session_id'
         )
         self.assertEqual(
+            target.get_detection_context.call_args_list[0][0][3],
+            'context_id'
+        )
+        self.assertEqual(
             target.get_detection_context.call_args_list[0][0][4],
-            'user_id'
+            'en_UK'
+        )
+        self.assertEqual(
+            target.get_detection_context.call_args_list[0][0][5],
+            'query'
         )
 
         self.assertEqual(
@@ -80,22 +86,26 @@ class do_Tests(TestCase):
         )
         self.assertEqual(
             target.get_suggestion.call_args_list[0][0][1],
-            'session_id'
+            'application_id'
         )
         self.assertEqual(
             target.get_suggestion.call_args_list[0][0][2],
-            'en_UK'
+            'session_id'
         )
         self.assertEqual(
             target.get_suggestion.call_args_list[0][0][3],
-            1
+            'en_UK'
         )
         self.assertEqual(
             target.get_suggestion.call_args_list[0][0][4],
+            1
+        )
+        self.assertEqual(
+            target.get_suggestion.call_args_list[0][0][5],
             10
         )
         self.assertDictEqual(
-            target.get_suggestion.call_args_list[0][0][5],
+            target.get_suggestion.call_args_list[0][0][6],
             {
                 '_id': 'created_context_id'
             }
@@ -131,12 +141,14 @@ class do_Tests(TestCase):
 
         actual = target.do(
             "user_id",
+            "application_id",
             "session_id",
             "context_id",
             "query",
             "en_UK",
             1,
-            10
+            10,
+            False
         )
 
         self.assertDictEqual(
@@ -156,23 +168,27 @@ class do_Tests(TestCase):
         )
         self.assertEqual(
             target.get_detection_context.call_args_list[0][0][0],
-            'context_id'
+            'user_id'
         )
         self.assertEqual(
             target.get_detection_context.call_args_list[0][0][1],
-            'en_UK'
+            'application_id'
         )
         self.assertEqual(
             target.get_detection_context.call_args_list[0][0][2],
-            'query'
-        )
-        self.assertEqual(
-            target.get_detection_context.call_args_list[0][0][3],
             'session_id'
         )
         self.assertEqual(
+            target.get_detection_context.call_args_list[0][0][3],
+            'context_id'
+        )
+        self.assertEqual(
             target.get_detection_context.call_args_list[0][0][4],
-            'user_id'
+            'en_UK'
+        )
+        self.assertEqual(
+            target.get_detection_context.call_args_list[0][0][5],
+            'query'
         )
 
         self.assertEqual(
@@ -185,22 +201,26 @@ class do_Tests(TestCase):
         )
         self.assertEqual(
             target.get_suggestion.call_args_list[0][0][1],
-            'session_id'
+            'application_id'
         )
         self.assertEqual(
             target.get_suggestion.call_args_list[0][0][2],
-            'en_UK'
+            'session_id'
         )
         self.assertEqual(
             target.get_suggestion.call_args_list[0][0][3],
-            1
+            'en_UK'
         )
         self.assertEqual(
             target.get_suggestion.call_args_list[0][0][4],
+            1
+        )
+        self.assertEqual(
+            target.get_suggestion.call_args_list[0][0][5],
             10
         )
         self.assertDictEqual(
-            target.get_suggestion.call_args_list[0][0][5],
+            target.get_suggestion.call_args_list[0][0][6],
             {
                 '_id': 'created_context_id'
             }
