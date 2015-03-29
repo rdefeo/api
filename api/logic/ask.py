@@ -116,7 +116,6 @@ class Ask(object):
         )
 
     def get_context(self, user_id, application_id, session_id, locale, detection_response, context_id, skip_mongodb_log):
-        http_client = HTTPClient()
         if context_id is None or detection_response is not None:
             request_body = {}
             if detection_response is not None:
@@ -126,7 +125,7 @@ class Ask(object):
             )
             if skip_mongodb_log:
                 url += "&skip_mongodb_log"
-
+            http_client = HTTPClient()
             response = http_client.fetch(
                 HTTPRequest(
                     url=url,
@@ -134,14 +133,17 @@ class Ask(object):
                     method="POST"
                 )
             )
+            http_client.close()
             return json_decode(response.body)
         else:
+            http_client = HTTPClient()
             context_response = http_client.fetch(
                 HTTPRequest(
-                    url="%s/%s?user_id=%s&session_id=%s" % (CONTEXT_URL, context_id, user_id, session_id),
+                    url="%s?context_id=%s&user_id=%s&session_id=%s" % (CONTEXT_URL, context_id, user_id, session_id),
                     method="GET"
                 )
             )
+            http_client.close()
             return json_decode(context_response.body)
 
     def get_suggestion(self, user_id, application_id, session_id, locale, page, page_size, context, skip_mongodb_log):
@@ -163,6 +165,7 @@ class Ask(object):
                 url=url
             )
         )
+        http_client.close()
         return json_decode(suggest_response.body)
 
     def get_detection(self, user_id, application_id, session_id, locale, query, context):
@@ -181,4 +184,5 @@ class Ask(object):
 
             )
         )
+        http_client.close()
         return json_decode(response.body)

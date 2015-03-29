@@ -1,4 +1,5 @@
 from api.handlers.ask import Ask
+from api.handlers.feedback import Feedback
 from api.handlers.proxy import Proxy
 
 __author__ = 'robdefeo'
@@ -15,6 +16,7 @@ class Application(tornado.web.Application):
     def __init__(self):
         handlers = [
             url(r"/ask", Ask, dict(logic=AskLogic(Content(4096))), name="ask"),
+            url(r"/feedback", Feedback, name="feedback"),
             url(r"/proxy.html", Proxy, name="proxy"),
             url(r"/status", Status, name="status")
             # url(r"/refresh", Refresh, name="refresh")
