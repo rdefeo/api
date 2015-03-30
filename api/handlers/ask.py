@@ -19,13 +19,13 @@ class Ask(RequestHandler):
     def get(self):
         self.set_header('Content-Type', 'application/json')
 
-        user_id = self.get_argument("user_id", "None")
+        user_id = self.get_argument("user_id", None)
         application_id = self.get_argument("application_id", None)
         context_id = self.get_argument("context_id", None)
         session_id = self.get_argument("session_id", None)
         locale = self.get_argument("locale", None)
         query = self.get_argument("q", None)
-        page = int(self.get_argument("page", 1))
+        offset = int(self.get_argument("offset", 0))
         page_size = int(self.get_argument("page_size", 10))
 
         if application_id is None:
@@ -54,7 +54,7 @@ class Ask(RequestHandler):
             )
         else:
             skip_mongodb_log = self.get_argument("skip_mongodb_log", None) is not None
-            response = self.logic.do(user_id, application_id, session_id, context_id, query, locale, page, page_size, skip_mongodb_log)
+            response = self.logic.do(user_id, application_id, session_id, context_id, query, locale, offset, page_size, skip_mongodb_log)
             self.set_status(200)
             self.set_header(
                 "Link",
@@ -67,7 +67,7 @@ class Ask(RequestHandler):
                         session_id,
                         response["context_id"],
                         locale,
-                        page,
+                        offset,
                         page_size
                     )
                 )
