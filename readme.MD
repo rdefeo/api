@@ -1,0 +1,1 @@
+[ ![Codeship Status for jemboo/api](https://codeship.com/projects/d71a22d0-b92a-0132-c070-4aefdff804e0/status?branch=master)](https://codeship.com/projects/71542)
