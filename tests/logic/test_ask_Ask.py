@@ -1,5 +1,5 @@
 from unittest import TestCase
-from unittest.mock import Mock
+from mock import Mock
 from api.logic.ask import Ask as Target
 __author__ = 'robdefeo'
 
@@ -31,7 +31,7 @@ class do_Tests(TestCase):
             "context_id",
             "query",
             "en_UK",
-            1,
+            0,
             10,
             False
         )
@@ -40,7 +40,7 @@ class do_Tests(TestCase):
             actual,
             {
                 'context_id': 'created_context_id',
-                'page': 1,
+                'offset': 0,
                 'page_size': 10,
                 'non_detections': 'non_detections_value',
                 'suggestions': 'filled_suggestions'
@@ -98,7 +98,7 @@ class do_Tests(TestCase):
         )
         self.assertEqual(
             target.get_suggestion.call_args_list[0][0][4],
-            1
+            0
         )
         self.assertEqual(
             target.get_suggestion.call_args_list[0][0][5],
@@ -146,7 +146,7 @@ class do_Tests(TestCase):
             "context_id",
             "query",
             "en_UK",
-            1,
+            0,
             10,
             False
         )
@@ -155,7 +155,7 @@ class do_Tests(TestCase):
             actual,
             {
                 'context_id': 'created_context_id',
-                'page': 1,
+                'offset': 0,
                 'page_size': 10,
                 'autocorrected': 'autocorrected_value',
                 'suggestions': 'filled_suggestions'
@@ -213,7 +213,7 @@ class do_Tests(TestCase):
         )
         self.assertEqual(
             target.get_suggestion.call_args_list[0][0][4],
-            1
+            0
         )
         self.assertEqual(
             target.get_suggestion.call_args_list[0][0][5],
