@@ -4,6 +4,7 @@ from tornado.httpclient import AsyncHTTPClient
 from tornado.web import RequestHandler, asynchronous
 from tornado.escape import json_encode
 from api.settings import DETECT_URL, SUGGEST_URL, CONTEXT_URL
+from api import __version__
 
 
 class Status(RequestHandler):
@@ -40,7 +41,8 @@ class Status(RequestHandler):
         self.set_status(200)
         self.finish({
             "services": services,
-            "status": "OK" if not any(x for x in services if x["status"] != "OK") else "NOT_OK"
+            "status": "OK" if not any(x for x in services if x["status"] != "OK") else "NOT_OK",
+            "version": __version__
         })
 
     def check_service_status(self, response, name):

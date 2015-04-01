@@ -1,3 +1,5 @@
+from api.settings import ADD_CORS_HEADERS
+
 __author__ = 'robdefeo'
 
 from tornado import gen
@@ -9,7 +11,8 @@ class Ask(RequestHandler):
         self.logic = logic
 
     def set_default_headers(self):
-        self.set_header("Access-Control-Allow-Origin", "*")
+        if ADD_CORS_HEADERS:
+            self.set_header("Access-Control-Allow-Origin", "*")
 
     def on_finish(self):
         pass

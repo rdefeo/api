@@ -1,6 +1,6 @@
 from tornado.escape import url_escape, json_decode, json_encode
 from tornado.httpclient import HTTPRequest, HTTPClient, AsyncHTTPClient
-from api.settings import CONTEXT_URL
+from api.settings import CONTEXT_URL, ADD_CORS_HEADERS
 
 __author__ = 'robdefeo'
 
@@ -13,9 +13,10 @@ class Feedback(RequestHandler):
         pass
 
     def set_default_headers(self):
-        self.set_header("Access-Control-Allow-Origin", "*")
-        self.set_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.set_header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept')
+        if ADD_CORS_HEADERS:
+            self.set_header("Access-Control-Allow-Origin", "*")
+            self.set_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+            self.set_header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept')
 
     def on_finish(self):
 
