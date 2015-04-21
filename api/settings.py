@@ -11,6 +11,8 @@ def get_env_setting(env_variable_name, default):
 
 PORT = int(get_env_setting("API_PORT", 9999))
 
+ADD_DEV_SSL = bool(int(get_env_setting("ADD_DEV_SSL", 0)))
+
 ADD_CORS_HEADERS = bool(int(get_env_setting("ADD_CORS_HEADERS", 0)))
 
 DETECT_URL = get_env_setting("API_DETECT_URL", "http://0.0.0.0:18999")
