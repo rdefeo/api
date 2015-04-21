@@ -13,9 +13,10 @@ class Content(object):
         http_client = HTTPClient()
         response = http_client.fetch(url)
         data = json_decode(response.body)
+        http_client.close()
         return {
             "title": data["title"],
-            "attributes": data["attributes"],
+            "attributes": [x for x in data["attributes"] if "key" not in x["_id"] or x["_id"]["key"] not in ["small sizes", "large sizes"]],
             "images": data["images"],
             "brand": data["brand"],
             "prices": data["prices"]

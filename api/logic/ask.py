@@ -1,6 +1,7 @@
 from tornado.escape import url_escape, json_decode, json_encode
 from tornado.httpclient import HTTPRequest, HTTPClient
 from api.settings import DETECT_URL, SUGGEST_URL, CONTEXT_URL
+from tornado.log import app_log
 
 __author__ = 'robdefeo'
 
@@ -12,7 +13,7 @@ class Ask(object):
     def get_detection_context(self, user_id, application_id, session_id, context_id, locale, query, skip_mongodb_log):
         context = self.get_context(user_id, application_id, session_id, locale, None, context_id, skip_mongodb_log)
         if query is not None:
-            detection_response = self.get_detection(user_id, application_id, session_id, locale, query, context)
+            detection_response = self.get_wit_detection(user_id, application_id, session_id, locale, query, context)
             # now don't pass the context_id cus for sure it will be replaced by the new detection
             context = self.get_context(user_id, application_id, session_id, locale, detection_response, context_id, skip_mongodb_log)
             return context, detection_response
@@ -41,13 +42,25 @@ class Ask(object):
 
         return response
 
+    def get_tile(self, suggestion):
+        for image in suggestion["images"]:
+            if "tiles" in image:
+                for tile in image["tiles"]:
+                    if tile["w"] == "w-md":
+                        return {
+                            "colspan": 1,
+                            "rowspan": 1 if tile["h"] == "h-md" else 2,
+                            "image_url": tile["path"]
+                        }
+
     def fill_suggestions(self, suggestions):
         items = []
-        for x in suggestions:
-            y = self.content.product_cache(x["_id"])
-            y["score"] = x["score"]
-            y["_id"] = x["_id"]
-            items.append(y)
+        for suggestion in suggestions:
+            new_suggestion = self.content.product_cache(suggestion["_id"])
+            new_suggestion["tile"] = self.get_tile(new_suggestion)
+            new_suggestion["score"] = suggestion["score"]
+            new_suggestion["_id"] = suggestion["_id"]
+            items.append(new_suggestion)
         return items
 
     def build_header_link(self, href, rel):
@@ -166,6 +179,8 @@ class Ask(object):
                 url += "&user_id=%s" % user_id
         if skip_mongodb_log:
             url += "&skip_mongodb_log"
+
+        app_log.debug("get_suggestions,url=%s",url)
         http_client = HTTPClient()
         suggest_response = http_client.fetch(
             HTTPRequest(
@@ -174,6 +189,24 @@ class Ask(object):
         )
         http_client.close()
         return json_decode(suggest_response.body)
+
+    def get_wit_detection(self, user_id, application_id, session_id, locale, query, context):
+        url="%s/wit?application_id=%s&session_id=%s&locale=%s&q=%s" % (
+            DETECT_URL,
+            application_id,
+            session_id,
+            locale,
+            url_escape(query)
+            # url_escape(json_encode(context))
+        )
+        if user_id is not None:
+            url += "&user_id=%s" % user_id
+        http_client = HTTPClient()
+        response = http_client.fetch(
+            HTTPRequest(url=url)
+        )
+        http_client.close()
+        return json_decode(response.body)
 
     def get_detection(self, user_id, application_id, session_id, locale, query, context):
         url="%s?application_id=%s&session_id=%s&locale=%s&q=%s" % (

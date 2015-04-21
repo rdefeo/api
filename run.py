@@ -13,6 +13,10 @@ tornado.options.define('debug', type=bool, default=False, help='run in debug mod
 
 if __name__ == "__main__":
     tornado.options.parse_command_line()
-    http_server = HTTPServer(Application())
+    # http_server = HTTPServer(Application())
+    http_server = tornado.httpserver.HTTPServer(Application(), ssl_options = {
+        "certfile": "/Users/robdefeo/development/api/dev_cert/58327134-jemboo.com.cert",
+        "keyfile": "/Users/robdefeo/development/api/dev_cert/58327134-jemboo.com.key",
+    })
     http_server.listen(tornado.options.options.port)
     IOLoop.instance().start()
