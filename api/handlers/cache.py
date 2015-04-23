@@ -17,5 +17,7 @@ class Cache(RequestHandler):
     def delete(self, *args, **kwargs):
         self.product_cache.clear()
         client = HTTPClient()
-        request = HTTPRequest("%s/cache" % SUGGEST_URL, method="DELETE")
-        client.fetch(request)
+        suggest_request = HTTPRequest("%s/cache" % SUGGEST_URL, method="DELETE")
+        client.fetch(suggest_request)
+        detect_request = HTTPRequest("%s/refresh" % DETECT_URL, method="GET")
+        client.fetch(detect_request)
