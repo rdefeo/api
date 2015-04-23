@@ -2,14 +2,15 @@ from api.handlers.ask import Ask
 from api.handlers.chat import Chat
 from api.handlers.feedback import Feedback
 from api.handlers.proxy import Proxy
+from api.handlers.status import Status
+from api.handlers.cache import Cache
 
-__author__ = 'robdefeo'
 import tornado
 import tornado.web
 import tornado.options
 from tornado.web import url
-from api.handlers.status import Status
 from api.logic.ask import Ask as AskLogic
+
 
 
 class Application(tornado.web.Application):
@@ -17,8 +18,10 @@ class Application(tornado.web.Application):
         from api.content import Content
         product_cache = Content(4096)
         ask_logic = AskLogic(product_cache)
+
         handlers = [
             url(r"/ask", Ask, dict(logic=ask_logic), name="ask"),
+            url(r"/cache", Cache, dict(product_cache=product_cache), name="cache"),
             url(r"/chat", Chat, dict(logic=ask_logic), name="chat"),
             url(r"/feedback", Feedback, name="feedback"),
             url(r"/proxy.html", Proxy, name="proxy"),

@@ -8,6 +8,9 @@ class Content(object):
     def __init__(self, cache_maxsize):
         self.product_cache = FunctionCacheManager(self.get_from_service, cache_maxsize)
 
+    def clear(self):
+        self.product_cache.clear()
+
     def get_from_service(self, _id):
         url = "%s/product_detail/%s.json" % (CONTENT_URL, _id)
         http_client = HTTPClient()
