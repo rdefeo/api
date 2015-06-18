@@ -21,3 +21,5 @@ class Cache(RequestHandler):
         client.fetch(suggest_request)
         detect_request = HTTPRequest("%s/refresh" % DETECT_URL, method="GET")
         client.fetch(detect_request)
+
+        self.finish()

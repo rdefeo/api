@@ -2,7 +2,7 @@ from pylru import FunctionCacheManager
 from tornado.escape import json_decode
 from tornado.httpclient import HTTPClient
 from api.settings import CONTENT_URL
-
+from datetime import datetime
 
 class Content(object):
     def __init__(self, cache_maxsize):
@@ -22,5 +22,6 @@ class Content(object):
             "attributes": [x for x in data["attributes"] if "key" not in x["_id"] or x["_id"]["key"] not in ["small sizes", "large sizes"]],
             "images": data["images"],
             "brand": data["brand"],
-            "prices": data["prices"]
+            "prices": data["prices"],
+            "updated": data["updated"] if "updated" in data else datetime(2015, 1, 1).isoformat()
         }

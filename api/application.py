@@ -12,7 +12,6 @@ from tornado.web import url
 from api.logic.ask import Ask as AskLogic
 
 
-
 class Application(tornado.web.Application):
     def __init__(self):
         from api.content import Content
