@@ -3,8 +3,6 @@ from tornado.httpclient import HTTPRequest, HTTPClient
 from api.settings import DETECT_URL, SUGGEST_URL, CONTEXT_URL
 from tornado.log import app_log
 
-__author__ = 'robdefeo'
-
 
 class Ask(object):
     def __init__(self, content):
@@ -21,7 +19,9 @@ class Ask(object):
             return context, None
 
     def do(self, user_id, application_id, session_id, context_id, query, locale, offset, page_size, skip_mongodb_log):
-        context, detection_response = self.get_detection_context(user_id, application_id, session_id, context_id, locale, query, skip_mongodb_log)
+        context, detection_response = self.get_detection_context(
+            user_id, application_id, session_id, context_id, locale, query, skip_mongodb_log
+        )
 
         suggest_response = self.get_suggestion(user_id, application_id, session_id, locale, offset, page_size, context, skip_mongodb_log)
         suggestions = self.fill_suggestions(suggest_response["suggestions"])
@@ -59,6 +59,7 @@ class Ask(object):
             new_suggestion = self.content.product_cache(suggestion["_id"])
             new_suggestion["tile"] = self.get_tile(new_suggestion)
             new_suggestion["score"] = suggestion["score"]
+            new_suggestion["reasons"] = suggestion["reasons"]
             new_suggestion["_id"] = suggestion["_id"]
             items.append(new_suggestion)
         return items
