@@ -57,11 +57,12 @@ class Ask(object):
         items = []
         for suggestion in suggestions:
             new_suggestion = self.content.product_cache(suggestion["_id"])
-            new_suggestion["tile"] = self.get_tile(new_suggestion)
-            new_suggestion["score"] = suggestion["score"]
-            new_suggestion["reasons"] = suggestion["reasons"]
-            new_suggestion["_id"] = suggestion["_id"]
-            items.append(new_suggestion)
+            if new_suggestion is not None:
+                new_suggestion["tile"] = self.get_tile(new_suggestion)
+                new_suggestion["score"] = suggestion["score"]
+                new_suggestion["reasons"] = suggestion["reasons"]
+                new_suggestion["_id"] = suggestion["_id"]
+                items.append(new_suggestion)
         return items
 
     def build_header_link(self, href, rel):
