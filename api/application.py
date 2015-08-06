@@ -13,6 +13,8 @@ from api.handlers.websocket import WebSocket
 from api.logic.ask import Ask as AskLogic
 from api.logic.websocket import WebSocket as WebSocketLogic
 
+client_handlers = {}
+
 
 class Application(tornado.web.Application):
     def __init__(self):
@@ -29,7 +31,7 @@ class Application(tornado.web.Application):
             # /ws/context
             # /rs/context
             # /rs/context/messages
-            url(r"/websocket", WebSocket, dict(content=product_cache), name="websocket"),
+            url(r"/websocket", WebSocket, dict(content=product_cache, client_handlers=client_handlers), name="websocket"),
             url(r"/ask", Ask, dict(logic=ask_logic), name="ask"),
             url(r"/cache", Cache, dict(product_cache=product_cache), name="cache"),
             url(r"/chat", Chat, dict(logic=ask_logic), name="chat"),
