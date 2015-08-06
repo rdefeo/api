@@ -1,32 +1,26 @@
 from uuid import uuid4
 from tornado.websocket import WebSocketHandler
-
+from tornado.escape import json_decode, json_encode
+from api.logic.websocket import WebSocket as WebSocketLogic
 __author__ = 'robdefeo'
 
-clients = {}
 
 
-class Websocket(WebSocketHandler):
+
+class WebSocket(WebSocketHandler):
+    def initialize(self, content):
+        self.logic = WebSocketLogic(content=content)
+
     def check_origin(self, origin):
         return True
 
     def open(self):
-        self._id = uuid4()
-        if self._id not in clients:
-            clients[self._id] = self
+        self.id = uuid4()
+        # self.get_query_argument("application_id")
+        self.logic.open(self)
 
     def on_message(self, message):
-        pass
-        # self.write_message()
-        # msg = json.loads(message)
-        # self.w
-        # clients["d"].wr
-        # msg['username'] = self.__rh.client_info[self.__clientID]['nick']
-        # pmessage = json.dumps(msg)
-        # rconns = self.__rh.roomate_cwsconns(self.__clientID)
-        # for conn in rconns:
-        #     conn.write_message(pmessage)
+        self.logic.on_message(json_decode(message))
 
     def on_close(self):
-        if self._id in clients:
-            clients.pop(self._id, None)
+        self.logic.on_close(self)
