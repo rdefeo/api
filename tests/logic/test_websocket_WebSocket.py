@@ -123,6 +123,42 @@ class on_close(TestCase):
 
 
 class open_Tests(TestCase):
+    def test_context_id_None(self):
+        target = Target(
+            content=None,
+            client_handlers={}
+        )
+        target.get_context = Mock(
+            return_value="get_context_value"
+        )
+        handler = Mock(name="new_client_handler")
+        handler.id = "new_id"
+        handler.context_id = "context_id"
+
+        target.open(handler)
+
+        self.assertEqual(1, target.get_context.call_count)
+        self.assertEqual("context_id", target.get_context.call_args_list[0][0][0])
+
+        self.assertEqual("get_context_value", handler.context)
+
+    def test_context_id_not_None(self):
+        target = Target(
+            content=None,
+            client_handlers={}
+        )
+        target.get_context = Mock()
+        handler = Mock()
+        handler.context_id = None
+
+        self.assertRaises(
+            NotImplementedError,
+            target.open,
+            handler
+        )
+
+        self.assertEqual(0, target.get_context.call_count)
+
     def test_new_id(self):
         client_handlers = {
             "different_id": "existing_handler"
@@ -131,15 +167,22 @@ class open_Tests(TestCase):
             content=None,
             client_handlers=client_handlers
         )
+        target.get_context = Mock(
+            return_value="get_context_value"
+        )
         handler = Mock(name="new_client_handler")
         handler.id = "new_id"
-        # handler.id = Mock()
-        # handler.id.return_value = "new_id"
+        handler.context_id = "context_id"
+
         target.open(handler)
 
         self.assertTrue("new_id" in client_handlers)
         self.assertEqual("new_id", client_handlers["new_id"].id)
         self.assertEqual("existing_handler", client_handlers["different_id"])
+        self.assertEqual(1, target.get_context.call_count)
+        self.assertEqual("context_id", target.get_context.call_args_list[0][0][0])
+
+        self.assertEqual("get_context_value", handler.context)
 
     def test_existing_id(self):
         client_handlers = {
@@ -150,11 +193,17 @@ class open_Tests(TestCase):
             content=None,
             client_handlers=client_handlers
         )
+        target.get_context = Mock(
+            return_value="get_context_value"
+        )
         handler = Mock(name="new_client_handler")
         handler.id = "existing_id"
-        # handler.id = Mock()
-        # handler.id.return_value = "new_id"
+        handler.context_id = "context_id"
         target.open(handler)
 
         self.assertTrue("existing_id" in client_handlers)
         self.assertEqual("existing_handler", client_handlers["existing_id"])
+        self.assertEqual(1, target.get_context.call_count)
+        self.assertEqual("context_id", target.get_context.call_args_list[0][0][0])
+
+        self.assertEqual("get_context_value", handler.context)
