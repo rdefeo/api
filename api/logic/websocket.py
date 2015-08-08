@@ -69,25 +69,25 @@ class WebSocket(Generic):
         http_client.close()
         return json_decode(context_response.body)
 
-    def post_context(self):
-        request_body = {}
-        # this now goes at message level
-        # if detection_response is not None:
-        #     request_body["detection_response"] = detection_response
-        url = "%s?session_id=%s&application_id=%s&locale=%s" % (
-            CONTEXT_URL, session_id, application_id, locale
-        )
-            if user_id is not None:
-                url += "&user_id=%s" % user_id
-            if skip_mongodb_log:
-                url += "&skip_mongodb_log"
-            http_client = HTTPClient()
-            response = http_client.fetch(
-                HTTPRequest(
-                    url=url,
-                    body=json_encode(request_body),
-                    method="POST"
-                )
-            )
-            http_client.close()
-            return json_decode(response.body)
+    # def post_context(self):
+    #     request_body = {}
+    #     # this now goes at message level
+    #     # if detection_response is not None:
+    #     #     request_body["detection_response"] = detection_response
+    #     url = "%s?session_id=%s&application_id=%s&locale=%s" % (
+    #         CONTEXT_URL, session_id, application_id, locale
+    #     )
+    #         if user_id is not None:
+    #             url += "&user_id=%s" % user_id
+    #         if skip_mongodb_log:
+    #             url += "&skip_mongodb_log"
+    #         http_client = HTTPClient()
+    #         response = http_client.fetch(
+    #             HTTPRequest(
+    #                 url=url,
+    #                 body=json_encode(request_body),
+    #                 method="POST"
+    #             )
+    #         )
+    #         http_client.close()
+    #         return json_decode(response.body)
