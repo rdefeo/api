@@ -131,6 +131,7 @@ class open_Tests(TestCase):
         target.get_context = Mock(
             return_value="get_context_value"
         )
+        target.post_context = Mock()
         handler = Mock(name="new_client_handler")
         handler.id = "new_id"
         handler.context_id = "context_id"
@@ -140,6 +141,8 @@ class open_Tests(TestCase):
         self.assertEqual(1, target.get_context.call_count)
         self.assertEqual("context_id", target.get_context.call_args_list[0][0][0])
 
+        self.assertEqual(0, target.post_context.call_count)
+
         self.assertEqual("get_context_value", handler.context)
 
     def test_context_id_not_None(self):
@@ -148,16 +151,34 @@ class open_Tests(TestCase):
             client_handlers={}
         )
         target.get_context = Mock()
+        target.post_context = Mock(
+            return_value={
+                "_id": "new_context_id"
+            }
+        )
         handler = Mock()
         handler.context_id = None
+        handler.user_id = "user_id_value"
+        handler.application_id = "application_id_value"
+        handler.session_id = "session_id_value"
+        handler.locale = "locale_value"
+        handler.skip_mongodb_log = "skip_mongodb_log_value"
 
-        self.assertRaises(
-            NotImplementedError,
-            target.open,
-            handler
-        )
+        target.open(handler)
 
         self.assertEqual(0, target.get_context.call_count)
+        self.assertEqual(1, target.post_context.call_count)
+
+        self.assertEqual("user_id_value", target.post_context.call_args_list[0][0][0])
+        self.assertEqual("application_id_value", target.post_context.call_args_list[0][0][1])
+        self.assertEqual("session_id_value", target.post_context.call_args_list[0][0][2])
+        self.assertEqual("locale_value", target.post_context.call_args_list[0][0][3])
+        self.assertEqual("skip_mongodb_log_value", target.post_context.call_args_list[0][0][4])
+
+        self.assertEqual(
+            "new_context_id",
+            handler.context_id
+        )
 
     def test_new_id(self):
         client_handlers = {
@@ -170,6 +191,7 @@ class open_Tests(TestCase):
         target.get_context = Mock(
             return_value="get_context_value"
         )
+        target.post_context = Mock()
         handler = Mock(name="new_client_handler")
         handler.id = "new_id"
         handler.context_id = "context_id"
@@ -184,6 +206,8 @@ class open_Tests(TestCase):
 
         self.assertEqual("get_context_value", handler.context)
 
+        self.assertEqual(0, target.post_context.call_count)
+
     def test_existing_id(self):
         client_handlers = {
             "existing_id": "existing_handler"
@@ -196,6 +220,7 @@ class open_Tests(TestCase):
         target.get_context = Mock(
             return_value="get_context_value"
         )
+        target.post_context = Mock()
         handler = Mock(name="new_client_handler")
         handler.id = "existing_id"
         handler.context_id = "context_id"
@@ -207,3 +232,5 @@ class open_Tests(TestCase):
         self.assertEqual("context_id", target.get_context.call_args_list[0][0][0])
 
         self.assertEqual("get_context_value", handler.context)
+
+        self.assertEqual(0, target.post_context.call_count)
