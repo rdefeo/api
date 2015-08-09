@@ -9,7 +9,11 @@ import tornado
 import tornado.web
 import tornado.options
 from tornado.web import url
+from api.handlers.websocket import WebSocket
 from api.logic.ask import Ask as AskLogic
+from api.logic.websocket import WebSocket as WebSocketLogic
+
+client_handlers = {}
 
 
 class Application(tornado.web.Application):
@@ -17,8 +21,17 @@ class Application(tornado.web.Application):
         from api.content import Content
         product_cache = Content(4096)
         ask_logic = AskLogic(product_cache)
+        # ws_logic = WebSocketLogic(product_cache)
 
         handlers = [
+            # /ws/product -> Push notifications etc
+            # /ws/ask
+            # /ws/ask -> Msg -> Conversation
+
+            # /ws/context
+            # /rs/context
+            # /rs/context/messages
+            url(r"/websocket", WebSocket, dict(content=product_cache, client_handlers=client_handlers), name="websocket"),
             url(r"/ask", Ask, dict(logic=ask_logic), name="ask"),
             url(r"/cache", Cache, dict(product_cache=product_cache), name="cache"),
             url(r"/chat", Chat, dict(logic=ask_logic), name="chat"),

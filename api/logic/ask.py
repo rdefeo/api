@@ -1,12 +1,32 @@
 from tornado.escape import url_escape, json_decode, json_encode
 from tornado.httpclient import HTTPRequest, HTTPClient
+from api.logic.generic import Generic
 from api.settings import DETECT_URL, SUGGEST_URL, CONTEXT_URL
 from tornado.log import app_log
 
 
-class Ask(object):
+class Ask(Generic):
     def __init__(self, content):
         self.content = content
+
+    @staticmethod
+    def get_wit_detection(user_id, application_id, session_id, locale, query, context):
+        url="%s/wit?application_id=%s&session_id=%s&locale=%s&q=%s" % (
+            DETECT_URL,
+            application_id,
+            session_id,
+            locale,
+            url_escape(query)
+            # url_escape(json_encode(context))
+        )
+        if user_id is not None:
+            url += "&user_id=%s" % user_id
+        http_client = HTTPClient()
+        response = http_client.fetch(
+            HTTPRequest(url=url)
+        )
+        http_client.close()
+        return json_decode(response.body)
 
     def get_detection_context(self, user_id, application_id, session_id, context_id, locale, query, skip_mongodb_log):
         context = self.get_context(user_id, application_id, session_id, locale, None, context_id, skip_mongodb_log)
@@ -17,6 +37,43 @@ class Ask(object):
             return context, detection_response
         else:
             return context, None
+
+    def get_context(self, user_id, application_id, session_id, locale, detection_response, context_id, skip_mongodb_log):
+        if context_id is None or detection_response is not None:
+            request_body = {}
+            if detection_response is not None:
+                request_body["detection_response"] = detection_response
+            url = "%s?session_id=%s&application_id=%s&locale=%s" % (
+                CONTEXT_URL, session_id, application_id, locale
+            )
+            if user_id is not None:
+                url += "&user_id=%s" % user_id
+            if skip_mongodb_log:
+                url += "&skip_mongodb_log"
+            http_client = HTTPClient()
+            response = http_client.fetch(
+                HTTPRequest(
+                    url=url,
+                    body=json_encode(request_body),
+                    method="POST"
+                )
+            )
+            http_client.close()
+            return json_decode(response.body)
+        else:
+            http_client = HTTPClient()
+            url = "%s?context_id=%s&session_id=%s" % (CONTEXT_URL, context_id, session_id)
+            if user_id is not None:
+                url += "&user_id=%s" % user_id
+
+            context_response = http_client.fetch(
+                HTTPRequest(
+                    url=url,
+                    method="GET"
+                )
+            )
+            http_client.close()
+            return json_decode(context_response.body)
 
     def do(self, user_id, application_id, session_id, context_id, query, locale, offset, page_size, skip_mongodb_log):
         context, detection_response = self.get_detection_context(
@@ -130,43 +187,6 @@ class Ask(object):
             page_size
         )
 
-    def get_context(self, user_id, application_id, session_id, locale, detection_response, context_id, skip_mongodb_log):
-        if context_id is None or detection_response is not None:
-            request_body = {}
-            if detection_response is not None:
-                request_body["detection_response"] = detection_response
-            url = "%s?session_id=%s&application_id=%s&locale=%s" % (
-                CONTEXT_URL, session_id, application_id, locale
-            )
-            if user_id is not None:
-                url += "&user_id=%s" % user_id
-            if skip_mongodb_log:
-                url += "&skip_mongodb_log"
-            http_client = HTTPClient()
-            response = http_client.fetch(
-                HTTPRequest(
-                    url=url,
-                    body=json_encode(request_body),
-                    method="POST"
-                )
-            )
-            http_client.close()
-            return json_decode(response.body)
-        else:
-            http_client = HTTPClient()
-            url = "%s?context_id=%s&session_id=%s" % (CONTEXT_URL, context_id, session_id)
-            if user_id is not None:
-                url += "&user_id=%s" % user_id
-
-            context_response = http_client.fetch(
-                HTTPRequest(
-                    url=url,
-                    method="GET"
-                )
-            )
-            http_client.close()
-            return json_decode(context_response.body)
-
     def get_suggestion(self, user_id, application_id, session_id, locale, offset, page_size, context, skip_mongodb_log):
         url = "%s?application_id=%s&session_id=%s&locale=%s&offset=%s&page_size=%s&context=%s" % (
             SUGGEST_URL,
@@ -191,24 +211,6 @@ class Ask(object):
         )
         http_client.close()
         return json_decode(suggest_response.body)
-
-    def get_wit_detection(self, user_id, application_id, session_id, locale, query, context):
-        url="%s/wit?application_id=%s&session_id=%s&locale=%s&q=%s" % (
-            DETECT_URL,
-            application_id,
-            session_id,
-            locale,
-            url_escape(query)
-            # url_escape(json_encode(context))
-        )
-        if user_id is not None:
-            url += "&user_id=%s" % user_id
-        http_client = HTTPClient()
-        response = http_client.fetch(
-            HTTPRequest(url=url)
-        )
-        http_client.close()
-        return json_decode(response.body)
 
     def get_detection(self, user_id, application_id, session_id, locale, query, context):
         url="%s?application_id=%s&session_id=%s&locale=%s&q=%s" % (
