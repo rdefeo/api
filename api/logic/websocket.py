@@ -1,9 +1,9 @@
-from tornado.escape import json_decode, json_encode
+from tornado.escape import json_decode, json_encode, url_escape
 from tornado.httpclient import HTTPClient, HTTPRequest
 
 from api.logic.generic import Generic
 from api.handlers.websocket import WebSocket as WebSocketHandler
-from api.settings import CONTEXT_URL
+from api.settings import CONTEXT_URL, DETECT_URL
 
 
 class WebSocket(Generic):
@@ -26,8 +26,8 @@ class WebSocket(Generic):
     def on_home_page_message(self, handler, message):
         new_message_text = message["message_text"]
         if len(new_message_text.strip()) > 0:
-            detection_response = self.get_wit_detection(
-                handler.user_id, handler.application_id, handler.session_id, handler.locale, new_message_text, None)
+            detection_response = self.get_detect(
+                handler.user_id, handler.application_id, handler.session_id, handler.locale, new_message_text)
 
         else:
             raise NotImplemented()
@@ -84,5 +84,24 @@ class WebSocket(Generic):
 
         http_client = HTTPClient()
         response = http_client.fetch(HTTPRequest(url=url, body=json_encode(request_body), method="POST"))
+        http_client.close()
+        return json_decode(response.body)
+
+    @staticmethod
+    def get_detect(user_id: str, application_id: str, session_id: str, locale: str, query: str) -> dict:
+        url = "%s/wit?application_id=%s&session_id=%s&locale=%s&q=%s" % (
+            DETECT_URL,
+            application_id,
+            session_id,
+            locale,
+            url_escape(query)
+            # url_escape(json_encode(context))
+        )
+        if user_id is not None:
+            url += "&user_id=%s" % user_id
+        http_client = HTTPClient()
+        response = http_client.fetch(
+            HTTPRequest(url=url)
+        )
         http_client.close()
         return json_decode(response.body)

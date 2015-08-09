@@ -17,7 +17,7 @@ class on_home_page_message(TestCase):
         handler.skip_mongodb_log = "skip_mongodb_log_value"
 
         target = Target(None, None)
-        target.get_detection_context = Mock()
+        target.get_detect = Mock()
 
         target.on_home_page_message(
             handler,
@@ -26,15 +26,13 @@ class on_home_page_message(TestCase):
             }
         )
 
-        self.assertEqual(1, target.get_detection_context.call_count)
+        self.assertEqual(1, target.get_detect.call_count)
 
-        self.assertEqual("user_id_value", target.get_detection_context.call_args_list[0][0][0])
-        self.assertEqual("application_id_value", target.get_detection_context.call_args_list[0][0][1])
-        self.assertEqual("session_id_value", target.get_detection_context.call_args_list[0][0][2])
-        self.assertIsNone(target.get_detection_context.call_args_list[0][0][3])
-        self.assertEqual("locale_value", target.get_detection_context.call_args_list[0][0][4])
-        self.assertEqual("message_text_value", target.get_detection_context.call_args_list[0][0][5])
-        self.assertEqual("skip_mongodb_log_value", target.get_detection_context.call_args_list[0][0][6])
+        self.assertEqual("user_id_value", target.get_detect.call_args_list[0][0][0])
+        self.assertEqual("application_id_value", target.get_detect.call_args_list[0][0][1])
+        self.assertEqual("session_id_value", target.get_detect.call_args_list[0][0][2])
+        self.assertEqual("locale_value", target.get_detect.call_args_list[0][0][3])
+        self.assertEqual("message_text_value", target.get_detect.call_args_list[0][0][4])
 
 
 class on_message(TestCase):
