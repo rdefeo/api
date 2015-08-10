@@ -1,5 +1,5 @@
 from tornado.escape import json_decode, json_encode, url_escape
-from tornado.httpclient import HTTPClient, HTTPRequest
+from tornado.httpclient import HTTPClient, HTTPRequest, HTTPError
 
 from api.logic.generic import Generic
 from api.handlers.websocket import WebSocket as WebSocketHandler
@@ -27,7 +27,9 @@ class WebSocket(Generic):
         new_message_text = message["message_text"]
         if len(new_message_text.strip()) > 0:
             detection_response = self.get_detect(
-                handler.user_id, handler.application_id, handler.session_id, handler.locale, new_message_text)
+                handler.user_id, handler.application_id, handler.session_id, handler.locale, new_message_text
+            )
+            self.post_context_message_user(handler.context_id, detection_response, new_message_text)
 
         else:
             raise NotImplemented()
@@ -66,26 +68,54 @@ class WebSocket(Generic):
         http_client.close()
         return json_decode(context_response.body)
 
-    @staticmethod
-    def post_context(user_id: str, application_id: str, session_id: str, locale: str, skip_mongodb_log: bool) -> dict:
-        request_body = {}
-        #     # this now goes at message level
-        #     # if detection_response is not None:
-        #     #     request_body["detection_response"] = detection_response
-        url = "%s?session_id=%s&application_id=%s&locale=%s" % (
-            CONTEXT_URL, session_id, application_id, locale
+    def post_context_message_user(self, context_id: str, detection_response: dict, message_text: str):
+        self.post_context_message(
+            context_id=context_id,
+            direction=1,
+            detection_response=detection_response,
+            message_text=message_text
         )
 
-        url += "&user_id=%s" % user_id if user_id is not None else ""
-        url += "&skip_mongodb_log" % user_id if skip_mongodb_log else ""
 
-        if skip_mongodb_log:
-            url += "&skip_mongodb_log"
+    @staticmethod
+    def post_context(user_id: str, application_id: str, session_id: str, locale: str, skip_mongodb_log: bool) -> dict:
+        try:
+            request_body = {}
+            #     # this now goes at message level
+            #     # if detection_response is not None:
+            #     #     request_body["detection_response"] = detection_response
+            url = "%s?session_id=%s&application_id=%s&locale=%s" % (
+                CONTEXT_URL, session_id, application_id, locale
+            )
 
+            url += "&user_id=%s" % user_id if user_id is not None else ""
+            url += "&skip_mongodb_log" % user_id if skip_mongodb_log else ""
+
+            if skip_mongodb_log:
+                url += "&skip_mongodb_log"
+
+            http_client = HTTPClient()
+            response = http_client.fetch(HTTPRequest(url=url, body=json_encode(request_body), method="POST"))
+            http_client.close()
+            return json_decode(response.body)
+        except HTTPError as e:
+            raise
+
+    @staticmethod
+    def post_context_message(context_id: str, direction: int, message_text: str, detection_response: dict=None):
+        request_body = {
+            "direction": direction,
+            "text": message_text
+        }
+        if detection_response is not None:
+            request_body["detection_id"] = detection_response["_id"]
+
+        url = "%s/%s/messages/" % (
+            CONTEXT_URL, context_id
+        )
         http_client = HTTPClient()
         response = http_client.fetch(HTTPRequest(url=url, body=json_encode(request_body), method="POST"))
         http_client.close()
-        return json_decode(response.body)
 
     @staticmethod
     def get_detect(user_id: str, application_id: str, session_id: str, locale: str, query: str) -> dict:
