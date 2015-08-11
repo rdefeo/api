@@ -97,7 +97,7 @@ class WebSocket(Generic):
             response = http_client.fetch(HTTPRequest(url=url, body=json_encode(request_body), method="POST"))
             http_client.close()
 
-            return response.headers["_id"], response.headers["_ver"]
+            return response.headers["_id"], response.headers["_rev"]
         except HTTPError as e:
             raise
 
@@ -117,7 +117,7 @@ class WebSocket(Generic):
             http_client = HTTPClient()
             response = http_client.fetch(HTTPRequest(url=url, body=json_encode(request_body), method="POST"))
             http_client.close()
-            return response.headers["_ver"]
+            return response.headers["_rev"]
         except HTTPError as e:
             pass
             raise
