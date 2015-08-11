@@ -26,7 +26,9 @@ class WebSocket(Generic):
             detection_response_location, detection_id = self.post_detect(
                 handler.user_id, handler.application_id, handler.session_id, handler.locale, new_message_text
             )
-            handler.context_ver = self.post_context_message_user(handler.context_id, detection_id, new_message_text)
+            detection_response = self.get_detect(detection_id)
+
+            handler.context_ver = self.post_context_message_user(handler.context_id, detection_response, new_message_text)
             pass
         else:
             raise NotImplemented()
@@ -65,11 +67,11 @@ class WebSocket(Generic):
         http_client.close()
         return json_decode(context_response.body)
 
-    def post_context_message_user(self, context_id: str, detection_id: str, message_text: str):
+    def post_context_message_user(self, context_id: str, detection: dict, message_text: str):
         return self.post_context_message(
             context_id=context_id,
             direction=1,
-            detection_id=detection_id,
+            detection=detection,
             message_text=message_text
         )
 
@@ -100,14 +102,14 @@ class WebSocket(Generic):
             raise
 
     @staticmethod
-    def post_context_message(context_id: str, direction: int, message_text: str, detection_id: str=None):
+    def post_context_message(context_id: str, direction: int, message_text: str, detection: str=None):
         try:
             request_body = {
                 "direction": direction,
                 "text": message_text
             }
-            if detection_id is not None:
-                request_body["detection_id"] = detection_id
+            if detection is not None:
+                request_body["detection"] = detection
 
             url = "%s/%s/messages/" % (
                 CONTEXT_URL, context_id
@@ -120,6 +122,13 @@ class WebSocket(Generic):
             pass
             raise
 
+    @staticmethod
+    def get_detect(detection_id) -> dict:
+        http_client = HTTPClient()
+        url = "%s/%s" % (DETECT_URL, detection_id)
+        context_response = http_client.fetch(HTTPRequest(url=url, method="GET"))
+        http_client.close()
+        return json_decode(context_response.body)
 
     @staticmethod
     def post_detect(user_id: str, application_id: str, session_id: str, locale: str, query: str) -> dict:
