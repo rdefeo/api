@@ -13,11 +13,9 @@ class WebSocket(Generic):
 
     def open(self, handler: WebSocketHandler):
         if handler.context_id is None:
-            handler.context = self.post_context(
-                handler.user_id, handler.application_id, handler.session_id, handler.locale, handler.skip_mongodb_log)
-            handler.context_id = handler.context["_id"]
-        else:
-            handler.context = self.get_context(handler.context_id)
+            handler.context_id, handler.context_ver = self.post_context(
+                handler.user_id, handler.application_id, handler.session_id, handler.locale, handler.skip_mongodb_log
+            )
 
         if handler.id not in self._client_handlers:
             self._client_handlers[handler.id] = handler
@@ -96,7 +94,8 @@ class WebSocket(Generic):
             http_client = HTTPClient()
             response = http_client.fetch(HTTPRequest(url=url, body=json_encode(request_body), method="POST"))
             http_client.close()
-            return json_decode(response.body)
+
+            return response["headers"]["_id"],  response["headers"]["_ver"]
         except HTTPError as e:
             raise
 

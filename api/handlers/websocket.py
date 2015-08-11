@@ -10,7 +10,6 @@ class WebSocket(WebSocketHandler):
     session_id = None
     skip_mongodb_log = None
     context_id = None
-    context = None
 
     def initialize(self, content, client_handlers):
         from api.logic.websocket import WebSocket as WebSocketLogic
