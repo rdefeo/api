@@ -13,7 +13,7 @@ class WebSocket(Generic):
 
     def open(self, handler: WebSocketHandler):
         if handler.context_id is None:
-            handler.context_id, handler.context_ver = self.post_context(
+            handler.context_id, handler.context_rev = self.post_context(
                 handler.user_id, handler.application_id, handler.session_id, handler.locale, handler.skip_mongodb_log
             )
 
@@ -23,13 +23,17 @@ class WebSocket(Generic):
     def on_home_page_message(self, handler, message):
         new_message_text = message["message_text"]
         if len(new_message_text.strip()) > 0:
-            detection_response_location, detection_id = self.post_detect(
+            detection_response_location = self.post_detect(
                 handler.user_id, handler.application_id, handler.session_id, handler.locale, new_message_text
             )
-            detection_response = self.get_detect(detection_id)
+            detection_response = self.get_detect(detection_response_location)
 
-            handler.context_ver = self.post_context_message_user(handler.context_id, detection_response, new_message_text)
-            pass
+            handler.context_ver = self.post_context_message_user(
+                handler.context_id,
+                detection_response,
+                new_message_text)
+
+            # TODO do suggestions
         else:
             raise NotImplemented()
 
@@ -60,12 +64,16 @@ class WebSocket(Generic):
             self._client_handlers.pop(handler.id, None)
 
     @staticmethod
-    def get_context(context_id: str) -> dict:
-        http_client = HTTPClient()
-        url = "%s?context_id=%s" % (CONTEXT_URL, context_id)
-        context_response = http_client.fetch(HTTPRequest(url=url, method="GET"))
-        http_client.close()
-        return json_decode(context_response.body)
+    def get_context(handler: WebSocketHandler) -> dict:
+        if handler._context is None or handler._context["_rev"] != handler.context_rev:
+            http_client = HTTPClient()
+            url = "%s?context_id=%s" % (CONTEXT_URL, handler.context_id)
+            context_response = http_client.fetch(HTTPRequest(url=url, method="GET"))
+            http_client.close()
+            handler._context = json_decode(context_response.body)
+            handler.context_rev = handler._context["_rev"]
+
+        return handler._context
 
     def post_context_message_user(self, context_id: str, detection: dict, message_text: str):
         return self.post_context_message(
@@ -74,7 +82,6 @@ class WebSocket(Generic):
             detection=detection,
             message_text=message_text
         )
-
 
     @staticmethod
     def post_context(user_id: str, application_id: str, session_id: str, locale: str, skip_mongodb_log: bool) -> dict:
@@ -102,7 +109,7 @@ class WebSocket(Generic):
             raise
 
     @staticmethod
-    def post_context_message(context_id: str, direction: int, message_text: str, detection: str=None):
+    def post_context_message(context_id: str, direction: int, message_text: str, detection: dict=None):
         try:
             request_body = {
                 "direction": direction,
@@ -111,9 +118,7 @@ class WebSocket(Generic):
             if detection is not None:
                 request_body["detection"] = detection
 
-            url = "%s/%s/messages/" % (
-                CONTEXT_URL, context_id
-            )
+            url = "%s/%s/messages/" % (CONTEXT_URL, context_id)
             http_client = HTTPClient()
             response = http_client.fetch(HTTPRequest(url=url, body=json_encode(request_body), method="POST"))
             http_client.close()
@@ -123,15 +128,15 @@ class WebSocket(Generic):
             raise
 
     @staticmethod
-    def get_detect(detection_id) -> dict:
+    def get_detect(location: str) -> dict:
         http_client = HTTPClient()
-        url = "%s/%s" % (DETECT_URL, detection_id)
+        url = "%s%s" % (DETECT_URL, location)
         context_response = http_client.fetch(HTTPRequest(url=url, method="GET"))
         http_client.close()
         return json_decode(context_response.body)
 
     @staticmethod
-    def post_detect(user_id: str, application_id: str, session_id: str, locale: str, query: str) -> dict:
+    def post_detect(user_id: str, application_id: str, session_id: str, locale: str, query: str) -> str:
         url = "%s?application_id=%s&session_id=%s&locale=%s&q=%s" % (
             DETECT_URL,
             application_id,
@@ -145,4 +150,4 @@ class WebSocket(Generic):
         http_client = HTTPClient()
         response = http_client.fetch(HTTPRequest(url=url, method="POST", body=json_encode({})))
         http_client.close()
-        return response.headers["Location"], response.headers["_id"]
+        return response.headers["Location"]

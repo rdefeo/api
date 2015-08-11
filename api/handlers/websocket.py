@@ -4,16 +4,19 @@ from tornado.escape import json_decode, json_encode
 
 
 class WebSocket(WebSocketHandler):
+    _logic = None
     user_id = None
     id = None
     application_id = None
     session_id = None
     skip_mongodb_log = None
     context_id = None
+    context_rev = None
+    _context = None
 
     def initialize(self, content, client_handlers):
         from api.logic.websocket import WebSocket as WebSocketLogic
-        self.logic = WebSocketLogic(content=content, client_handlers=client_handlers)
+        self._logic = WebSocketLogic(content=content, client_handlers=client_handlers)
 
     def check_origin(self, origin):
         return True
@@ -27,10 +30,10 @@ class WebSocket(WebSocketHandler):
         self.locale = self.get_argument("locale", None)
         self.skip_mongodb_log = self.get_argument("skip_mongodb_log", None) is not None
 
-        self.logic.open(self)
+        self._logic.open(self)
 
     def on_message(self, message):
-        self.logic.on_message(self, json_decode(message))
+        self._logic.on_message(self, json_decode(message))
 
     def on_close(self):
-        self.logic.on_close(self)
+        self._logic.on_close(self)
