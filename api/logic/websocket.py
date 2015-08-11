@@ -95,25 +95,30 @@ class WebSocket(Generic):
             response = http_client.fetch(HTTPRequest(url=url, body=json_encode(request_body), method="POST"))
             http_client.close()
 
-            return response["headers"]["_id"],  response["headers"]["_ver"]
+            return response.headers["_id"], response.headers["_ver"]
         except HTTPError as e:
             raise
 
     @staticmethod
     def post_context_message(context_id: str, direction: int, message_text: str, detection_id: str=None):
-        request_body = {
-            "direction": direction,
-            "text": message_text
-        }
-        if detection_id is not None:
-            request_body["detection_id"] = detection_id
+        try:
+            request_body = {
+                "direction": direction,
+                "text": message_text
+            }
+            if detection_id is not None:
+                request_body["detection_id"] = detection_id
 
-        url = "%s/%s/messages/" % (
-            CONTEXT_URL, context_id
-        )
-        http_client = HTTPClient()
-        response = http_client.fetch(HTTPRequest(url=url, body=json_encode(request_body), method="POST"))
-        http_client.close()
+            url = "%s/%s/messages/" % (
+                CONTEXT_URL, context_id
+            )
+            http_client = HTTPClient()
+            response = http_client.fetch(HTTPRequest(url=url, body=json_encode(request_body), method="POST"))
+            http_client.close()
+        except HTTPError as e:
+            pass
+            raise
+
 
     @staticmethod
     def post_detect(user_id: str, application_id: str, session_id: str, locale: str, query: str) -> dict:
