@@ -26,8 +26,8 @@ class WebSocket(Generic):
             detection_response_location, detection_id = self.post_detect(
                 handler.user_id, handler.application_id, handler.session_id, handler.locale, new_message_text
             )
-            self.post_context_message_user(handler.context_id, detection_id, new_message_text)
-
+            handler.context_ver = self.post_context_message_user(handler.context_id, detection_id, new_message_text)
+            pass
         else:
             raise NotImplemented()
 
@@ -66,7 +66,7 @@ class WebSocket(Generic):
         return json_decode(context_response.body)
 
     def post_context_message_user(self, context_id: str, detection_id: str, message_text: str):
-        self.post_context_message(
+        return self.post_context_message(
             context_id=context_id,
             direction=1,
             detection_id=detection_id,
@@ -115,6 +115,7 @@ class WebSocket(Generic):
             http_client = HTTPClient()
             response = http_client.fetch(HTTPRequest(url=url, body=json_encode(request_body), method="POST"))
             http_client.close()
+            return response.headers["_ver"]
         except HTTPError as e:
             pass
             raise
