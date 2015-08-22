@@ -9,13 +9,15 @@ from api.logic.websocket import WebSocket as Target
 
 class on_home_page_message(TestCase):
     def test_regular(self):
-        handler = Mock()
+        handler = Mock(name="handler_value")
         handler.context_id = "context_id_value"
         handler.user_id = "user_id_value"
         handler.application_id = "application_id_value"
         handler.session_id = "session_id_value"
         handler.locale = "locale_value"
         handler.skip_mongodb_log = "skip_mongodb_log_value"
+        handler.page_size = "page_size_value"
+        handler.offset = "offset_value"
 
         target = Target(None, None)
         target.post_detect = Mock(
@@ -24,7 +26,21 @@ class on_home_page_message(TestCase):
         target.get_detect = Mock(
             return_value="detection_response"
         )
-        target.post_context_message_user = Mock()
+        target.post_context_message_user = Mock(
+            return_value="post_context_message_user_context_ver"
+        )
+
+        target.get_context = Mock(
+            return_value="context_value"
+        )
+
+        target.post_suggest = Mock(
+            return_value="suggest_id_value"
+        )
+
+        target.get_suggestion_items = Mock(
+            return_value=("suggestions_items_value", "offset_value")
+        )
 
         target.on_home_page_message(
             handler,
@@ -48,6 +64,31 @@ class on_home_page_message(TestCase):
         self.assertEqual("context_id_value", target.post_context_message_user.call_args_list[0][0][0])
         self.assertEqual("detection_response", target.post_context_message_user.call_args_list[0][0][1])
         self.assertEqual("message_text_value", target.post_context_message_user.call_args_list[0][0][2])
+
+        self.assertEqual(1, target.get_context.call_count)
+
+        self.assertEqual(handler, target.get_context.call_args_list[0][0][0])
+
+        self.assertEqual(1, target.post_suggest.call_count)
+        self.assertEqual("user_id_value", target.post_suggest.call_args_list[0][0][0])
+        self.assertEqual("application_id_value", target.post_suggest.call_args_list[0][0][1])
+        self.assertEqual("session_id_value", target.post_suggest.call_args_list[0][0][2])
+        self.assertEqual("locale_value", target.post_suggest.call_args_list[0][0][3])
+        self.assertEqual("context_value", target.post_suggest.call_args_list[0][0][4])
+
+        self.assertEqual(1, target.get_suggestion_items.call_count)
+        self.assertEqual("user_id_value", target.get_suggestion_items.call_args_list[0][0][0])
+        self.assertEqual("application_id_value", target.get_suggestion_items.call_args_list[0][0][1])
+        self.assertEqual("session_id_value", target.get_suggestion_items.call_args_list[0][0][2])
+        self.assertEqual("locale_value", target.get_suggestion_items.call_args_list[0][0][3])
+        self.assertEqual("page_size_value", target.get_suggestion_items.call_args_list[0][0][4])
+        self.assertEqual("offset_value", target.get_suggestion_items.call_args_list[0][0][5])
+
+        self.assertEqual("context_id_value", handler.context_id)
+        self.assertEqual("post_context_message_user_context_ver", handler.context_ver)
+        self.assertEqual("suggest_id_value", handler.suggest_id)
+        self.assertEqual("offset_value", handler.offset)
+
 
 class on_message(TestCase):
     def test_no_message_type(self):
@@ -168,7 +209,6 @@ class open_Tests(TestCase):
         handler.application_id = "application_id_value"
         handler.session_id = "session_id_value"
         handler.locale = "locale_value"
-        handler.skip_mongodb_log = "skip_mongodb_log_value"
 
         target.open(handler)
 
@@ -179,7 +219,6 @@ class open_Tests(TestCase):
         self.assertEqual("application_id_value", target.post_context.call_args_list[0][0][1])
         self.assertEqual("session_id_value", target.post_context.call_args_list[0][0][2])
         self.assertEqual("locale_value", target.post_context.call_args_list[0][0][3])
-        self.assertEqual("skip_mongodb_log_value", target.post_context.call_args_list[0][0][4])
 
         self.assertEqual(
             "context_id_value",

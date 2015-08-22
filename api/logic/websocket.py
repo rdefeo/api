@@ -1,9 +1,10 @@
+from bson.json_util import dumps, loads
 from tornado.escape import json_decode, json_encode, url_escape
 from tornado.httpclient import HTTPClient, HTTPRequest, HTTPError
 
 from api.logic.generic import Generic
 from api.handlers.websocket import WebSocket as WebSocketHandler
-from api.settings import CONTEXT_URL, DETECT_URL
+from api.settings import CONTEXT_URL, DETECT_URL, SUGGEST_URL
 
 
 class WebSocket(Generic):
@@ -14,7 +15,7 @@ class WebSocket(Generic):
     def open(self, handler: WebSocketHandler):
         if handler.context_id is None:
             handler.context_id, handler.context_rev = self.post_context(
-                handler.user_id, handler.application_id, handler.session_id, handler.locale, handler.skip_mongodb_log
+                handler.user_id, handler.application_id, handler.session_id, handler.locale
             )
 
         if handler.id not in self._client_handlers:
@@ -28,10 +29,32 @@ class WebSocket(Generic):
             )
             detection_response = self.get_detect(detection_response_location)
 
-            handler.context_ver = self.post_context_message_user(
+            handler.context_rev = self.post_context_message_user(
                 handler.context_id,
                 detection_response,
-                new_message_text)
+                new_message_text
+            )
+
+            handler.suggest_id = self.post_suggest(
+                handler.user_id, handler.application_id, handler.session_id, handler.locale, self.get_context(handler)
+            )
+
+            suggestion_items, handler.offset = self.get_suggestion_items(
+                handler.user_id,
+                handler.application_id,
+                handler.session_id,
+                handler.locale,
+                handler.suggest_id,
+                handler.page_size,
+                handler.offset
+            )
+
+            handler.write_message(
+                {
+                    "type": "suggestion_items",
+                    "items": suggestion_items
+                }
+            )
 
             # TODO do suggestions
         else:
@@ -65,26 +88,18 @@ class WebSocket(Generic):
 
     @staticmethod
     def get_context(handler: WebSocketHandler) -> dict:
-        if handler._context is None or handler._context["_rev"] != handler.context_rev:
+        if handler.context is None or handler.context["_rev"] != handler.context_rev:
             http_client = HTTPClient()
-            url = "%s?context_id=%s" % (CONTEXT_URL, handler.context_id)
+            url = "%s/%s" % (CONTEXT_URL, handler.context_id)
             context_response = http_client.fetch(HTTPRequest(url=url, method="GET"))
             http_client.close()
-            handler._context = json_decode(context_response.body)
-            handler.context_rev = handler._context["_rev"]
+            handler.context = json_decode(context_response.body)
+            handler.context_rev = handler.context["_rev"]
 
-        return handler._context
-
-    def post_context_message_user(self, context_id: str, detection: dict, message_text: str):
-        return self.post_context_message(
-            context_id=context_id,
-            direction=1,
-            detection=detection,
-            message_text=message_text
-        )
+        return handler.context
 
     @staticmethod
-    def post_context(user_id: str, application_id: str, session_id: str, locale: str, skip_mongodb_log: bool) -> dict:
+    def post_context(user_id: str, application_id: str, session_id: str, locale: str) -> dict:
         try:
             request_body = {}
             #     # this now goes at message level
@@ -95,10 +110,6 @@ class WebSocket(Generic):
             )
 
             url += "&user_id=%s" % user_id if user_id is not None else ""
-            url += "&skip_mongodb_log" % user_id if skip_mongodb_log else ""
-
-            if skip_mongodb_log:
-                url += "&skip_mongodb_log"
 
             http_client = HTTPClient()
             response = http_client.fetch(HTTPRequest(url=url, body=json_encode(request_body), method="POST"))
@@ -107,6 +118,14 @@ class WebSocket(Generic):
             return response.headers["_id"], response.headers["_rev"]
         except HTTPError as e:
             raise
+
+    def post_context_message_user(self, context_id: str, detection: dict, message_text: str):
+        return self.post_context_message(
+            context_id=context_id,
+            direction=1,
+            detection=detection,
+            message_text=message_text
+        )
 
     @staticmethod
     def post_context_message(context_id: str, direction: int, message_text: str, detection: dict=None):
@@ -120,7 +139,7 @@ class WebSocket(Generic):
 
             url = "%s/%s/messages/" % (CONTEXT_URL, context_id)
             http_client = HTTPClient()
-            response = http_client.fetch(HTTPRequest(url=url, body=json_encode(request_body), method="POST"))
+            response = http_client.fetch(HTTPRequest(url=url, body=dumps(request_body), method="POST"))
             http_client.close()
             return response.headers["_rev"]
         except HTTPError as e:
@@ -151,3 +170,38 @@ class WebSocket(Generic):
         response = http_client.fetch(HTTPRequest(url=url, method="POST", body=json_encode({})))
         http_client.close()
         return response.headers["Location"]
+
+    @staticmethod
+    def post_suggest(user_id: str, application_id: str, session_id: str, locale: str, context: dict) -> str:
+        try:
+            request_body = {
+                "context": context
+            }
+
+            url = "%s?session_id=%s&application_id=%s&locale=%s" % (
+                SUGGEST_URL, session_id, application_id, locale
+            )
+
+            url += "&user_id=%s" % user_id if user_id is not None else ""
+
+            http_client = HTTPClient()
+            response = http_client.fetch(HTTPRequest(url=url, body=dumps(request_body), method="POST"))
+            http_client.close()
+
+            return response.headers["_id"]
+        except HTTPError as e:
+            raise
+
+    @staticmethod
+    def get_suggestion_items(user_id: str, application_id: str, session_id: str, locale: str, suggestion_id: str,
+                             page_size: int, offset: int) -> (dict, int):
+        http_client = HTTPClient()
+        url = "%s/%s/items?session_id=%s&application_id=%s&locale=%s&page_size=%s&offset=%s" % (
+            SUGGEST_URL, suggestion_id, session_id, application_id, locale, page_size, offset
+        )
+
+        url += "&user_id=%s" % user_id if user_id is not None else ""
+
+        suggest_response = http_client.fetch(HTTPRequest(url=url, method="GET"))
+        http_client.close()
+        return json_decode(suggest_response.body), suggest_response.headers["next_offset"]

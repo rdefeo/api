@@ -9,10 +9,14 @@ class WebSocket(WebSocketHandler):
     id = None
     application_id = None
     session_id = None
-    skip_mongodb_log = None
+
     context_id = None
     context_rev = None
-    _context = None
+    context = None
+
+    suggest_id = None
+    offset = None
+    page_size = None
 
     def initialize(self, content, client_handlers):
         from api.logic.websocket import WebSocket as WebSocketLogic
@@ -28,7 +32,9 @@ class WebSocket(WebSocketHandler):
         self.context_id = self.get_argument("context_id", None)
         self.session_id = self.get_argument("session_id", None)
         self.locale = self.get_argument("locale", None)
-        self.skip_mongodb_log = self.get_argument("skip_mongodb_log", None) is not None
+        self.page_size = 20
+        self.offset = 0
+        self.suggest_id = None
 
         self._logic.open(self)
 
