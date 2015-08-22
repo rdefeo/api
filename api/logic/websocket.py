@@ -21,9 +21,10 @@ class WebSocket(Generic):
         if handler.id not in self._client_handlers:
             self._client_handlers[handler.id] = handler
 
-    def on_home_page_message(self, handler, message):
+    def on_home_page_message(self, handler: WebSocketHandler, message):
         new_message_text = message["message_text"]
         if len(new_message_text.strip()) > 0:
+            handler.offset = 0
             detection_response_location = self.post_detect(
                 handler.user_id, handler.application_id, handler.session_id, handler.locale, new_message_text
             )
@@ -56,7 +57,6 @@ class WebSocket(Generic):
                 }
             )
 
-            # TODO do suggestions
         else:
             raise NotImplemented()
 
