@@ -1,9 +1,11 @@
 from uuid import uuid4
 from tornado.websocket import WebSocketHandler
 from tornado.escape import json_decode, json_encode
+from api.handlers.extractors import ParamExtractor
 
 
 class WebSocket(WebSocketHandler):
+    _param_extractor = None
     _logic = None
     user_id = None
     id = None
@@ -21,17 +23,18 @@ class WebSocket(WebSocketHandler):
     def initialize(self, content, client_handlers):
         from api.logic.websocket import WebSocket as WebSocketLogic
         self._logic = WebSocketLogic(content=content, client_handlers=client_handlers)
+        self._param_extractor = ParamExtractor()
 
     def check_origin(self, origin):
         return True
 
     def open(self):
         self.id = uuid4()
-        self.user_id = self.get_argument("user_id", None)
-        self.application_id = self.get_argument("application_id", None)
-        self.context_id = self.get_argument("context_id", None)
-        self.session_id = self.get_argument("session_id", None)
-        self.locale = self.get_argument("locale", None)
+        self.user_id = self._param_extractor.user_id()
+        self.application_id = self._param_extractor.application_id()
+        self.context_id = self._param_extractor.context_id()
+        self.session_id = self._param_extractor.session_id()
+        self.locale = self._param_extractor.locale()
         self.page_size = 20
         self.offset = 0
         self.suggest_id = None
