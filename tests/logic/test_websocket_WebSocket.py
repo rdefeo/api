@@ -7,6 +7,51 @@ from mock import Mock
 from api.logic.websocket import WebSocket as Target
 
 
+class on_next_page_message(TestCase):
+    def test_regular(self):
+        handler = Mock(name="handler_value")
+        handler.context_id = "context_id_value"
+        handler.user_id = "user_id_value"
+        handler.application_id = "application_id_value"
+        handler.session_id = "session_id_value"
+        handler.locale = "locale_value"
+        handler.suggest_id = "suggest_id_value"
+        handler.page_size = "page_size_value"
+        handler.offset = "original_offset_value"
+
+        target = Target(None, None)
+
+        target.get_suggestion_items = Mock(
+            return_value=("suggestions_items_value", "new_offset_value")
+        )
+
+        target.write_suggestion_items = Mock()
+
+        target.on_next_page_message(
+            handler,
+            {
+
+            }
+        )
+
+        self.assertEqual(1, target.get_suggestion_items.call_count)
+        self.assertEqual("user_id_value", target.get_suggestion_items.call_args_list[0][0][0])
+        self.assertEqual("application_id_value", target.get_suggestion_items.call_args_list[0][0][1])
+        self.assertEqual("session_id_value", target.get_suggestion_items.call_args_list[0][0][2])
+        self.assertEqual("locale_value", target.get_suggestion_items.call_args_list[0][0][3])
+        self.assertEqual("suggest_id_value", target.get_suggestion_items.call_args_list[0][0][4])
+        self.assertEqual("page_size_value", target.get_suggestion_items.call_args_list[0][0][5])
+        self.assertEqual("original_offset_value", target.get_suggestion_items.call_args_list[0][0][6])
+
+        self.assertEqual("context_id_value", handler.context_id)
+        self.assertEqual("suggest_id_value", handler.suggest_id)
+        self.assertEqual("new_offset_value", handler.offset)
+
+        self.assertEqual(1, target.write_suggestion_items.call_count)
+        self.assertEqual(handler, target.write_suggestion_items.call_args_list[0][0][0])
+        self.assertEqual("suggestions_items_value", target.write_suggestion_items.call_args_list[0][0][1])
+
+
 class on_home_page_message(TestCase):
     def test_regular(self):
         handler = Mock(name="handler_value")
@@ -27,7 +72,7 @@ class on_home_page_message(TestCase):
             return_value="detection_response"
         )
         target.post_context_message_user = Mock(
-            return_value="post_context_message_user_context_ver"
+            return_value="post_context_message_user_context_rev"
         )
 
         target.get_context = Mock(
@@ -41,6 +86,8 @@ class on_home_page_message(TestCase):
         target.get_suggestion_items = Mock(
             return_value=("suggestions_items_value", "offset_value")
         )
+
+        target.write_suggestion_items = Mock()
 
         target.on_home_page_message(
             handler,
@@ -81,13 +128,18 @@ class on_home_page_message(TestCase):
         self.assertEqual("application_id_value", target.get_suggestion_items.call_args_list[0][0][1])
         self.assertEqual("session_id_value", target.get_suggestion_items.call_args_list[0][0][2])
         self.assertEqual("locale_value", target.get_suggestion_items.call_args_list[0][0][3])
-        self.assertEqual("page_size_value", target.get_suggestion_items.call_args_list[0][0][4])
-        self.assertEqual("offset_value", target.get_suggestion_items.call_args_list[0][0][5])
+        self.assertEqual("suggest_id_value", target.get_suggestion_items.call_args_list[0][0][4])
+        self.assertEqual("page_size_value", target.get_suggestion_items.call_args_list[0][0][5])
+        self.assertEqual(0, target.get_suggestion_items.call_args_list[0][0][6])
 
         self.assertEqual("context_id_value", handler.context_id)
-        self.assertEqual("post_context_message_user_context_ver", handler.context_ver)
+        self.assertEqual("post_context_message_user_context_rev", handler.context_rev)
         self.assertEqual("suggest_id_value", handler.suggest_id)
         self.assertEqual("offset_value", handler.offset)
+
+        self.assertEqual(1, target.write_suggestion_items.call_count)
+        self.assertEqual(handler, target.write_suggestion_items.call_args_list[0][0][0])
+        self.assertEqual("suggestions_items_value", target.write_suggestion_items.call_args_list[0][0][1])
 
 
 class on_message(TestCase):
@@ -120,6 +172,7 @@ class on_message(TestCase):
     def test_home_page_message(self):
         target = Target(None, None)
         target.on_home_page_message = Mock()
+        target.on_next_page_message = Mock()
 
         target.on_message(
             "handler_value",
@@ -135,6 +188,30 @@ class on_message(TestCase):
                 "type": "home_page_message"
             },
             target.on_home_page_message.call_args_list[0][0][1]
+        )
+
+        self.assertEqual(0, target.on_next_page_message.call_count)
+
+    def test_next_page_message(self):
+        target = Target(None, None)
+        target.on_home_page_message = Mock()
+        target.on_next_page_message = Mock()
+
+        target.on_message(
+            "handler_value",
+            {
+                "type": "next_page"
+            }
+        )
+
+        self.assertEqual(0, target.on_home_page_message.call_count)
+        self.assertEqual(1, target.on_next_page_message.call_count)
+        self.assertEqual("handler_value", target.on_next_page_message.call_args_list[0][0][0])
+        self.assertDictEqual(
+            {
+                "type": "next_page"
+            },
+            target.on_next_page_message.call_args_list[0][0][1]
         )
 
 

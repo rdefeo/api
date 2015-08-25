@@ -21,7 +21,28 @@ class WebSocket(Generic):
         if handler.id not in self._client_handlers:
             self._client_handlers[handler.id] = handler
 
-    def on_home_page_message(self, handler: WebSocketHandler, message):
+    def write_suggestion_items(self, handler: WebSocketHandler, suggestion_items: list):
+        handler.write_message(
+            {
+                "type": "suggestion_items",
+                "items": suggestion_items
+            }
+        )
+
+    def on_next_page_message(self, handler: WebSocketHandler, message: dict):
+        suggestion_items, handler.offset = self.get_suggestion_items(
+            handler.user_id,
+            handler.application_id,
+            handler.session_id,
+            handler.locale,
+            handler.suggest_id,
+            handler.page_size,
+            handler.offset
+        )
+
+        self.write_suggestion_items(handler, suggestion_items)
+
+    def on_home_page_message(self, handler: WebSocketHandler, message: dict):
         new_message_text = message["message_text"]
         if len(new_message_text.strip()) > 0:
             handler.offset = 0
@@ -29,6 +50,7 @@ class WebSocket(Generic):
                 handler.user_id, handler.application_id, handler.session_id, handler.locale, new_message_text
             )
             detection_response = self.get_detect(detection_response_location)
+            # TODO non detected items
 
             handler.context_rev = self.post_context_message_user(
                 handler.context_id,
@@ -50,12 +72,7 @@ class WebSocket(Generic):
                 handler.offset
             )
 
-            handler.write_message(
-                {
-                    "type": "suggestion_items",
-                    "items": suggestion_items
-                }
-            )
+            self.write_suggestion_items(handler, suggestion_items)
 
         else:
             raise NotImplemented()
@@ -78,6 +95,8 @@ class WebSocket(Generic):
             raise Exception("missing message type,message=%s", message)
         elif message["type"] == "home_page_message":
             self.on_home_page_message(handler, message)
+        elif message["type"] == "next_page":
+            self.on_next_page_message(handler, message)
         else:
             raise Exception("unknown message_type, type=%s,message=%s", message["type"], message)
         pass
@@ -91,6 +110,7 @@ class WebSocket(Generic):
         if handler.context is None or handler.context["_rev"] != handler.context_rev:
             http_client = HTTPClient()
             url = "%s/%s" % (CONTEXT_URL, handler.context_id)
+            url += "?_rev=%s" % handler.context_rev if handler.context_rev is not None else ""
             context_response = http_client.fetch(HTTPRequest(url=url, method="GET"))
             http_client.close()
             handler.context = json_decode(context_response.body)
