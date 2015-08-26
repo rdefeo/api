@@ -23,7 +23,7 @@ class WebSocket(WebSocketHandler):
     def initialize(self, content, client_handlers):
         from api.logic.websocket import WebSocket as WebSocketLogic
         self._logic = WebSocketLogic(content=content, client_handlers=client_handlers)
-        self._param_extractor = ParamExtractor()
+        self._param_extractor = ParamExtractor(self)
 
     def check_origin(self, origin):
         return True

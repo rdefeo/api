@@ -1,10 +1,72 @@
-__author__ = 'robdefeo'
-
 from unittest import TestCase
 
 from mock import Mock
 
 from api.logic.websocket import WebSocket as Target
+
+
+class fill_suggestions(TestCase):
+    def test_regular(self):
+        content = Mock()
+        content.product_cache.side_effect = [
+            {
+                "_id": "new_suggestion_id_value_1"
+            },
+            {
+                "_id": "new_suggestion_id_value_2"
+            }
+        ]
+        target = Target(content, None)
+        target.get_tile = Mock(
+            side_effect=[
+                "tile_1",
+                "tile_2"
+            ]
+        )
+
+        actual = target.fill_suggestions(
+            [
+                {
+                    "_id": "_id_value_1",
+                    "score": "suggestion_score_1",
+                    "reasons": "suggestion_reasons_1",
+                    "index": "suggestion_index_1"
+                },
+                {
+                    "_id": "_id_value_2",
+                    "score": "suggestion_score_2",
+                    "reasons": "suggestion_reasons_2",
+                    "index": "suggestion_index_2"
+                }
+            ]
+        )
+        self.assertListEqual(
+            [{'_id': '_id_value_1', 'score': 'suggestion_score_1', 'tile': 'tile_1', 'position': 'suggestion_index_1',
+              'reasons': 'suggestion_reasons_1'},
+             {'_id': '_id_value_2', 'score': 'suggestion_score_2', 'tile': 'tile_2', 'position': 'suggestion_index_2',
+              'reasons': 'suggestion_reasons_2'}],
+            actual
+        )
+
+        self.assertEqual(2, target.get_tile.call_count)
+        self.assertDictEqual(
+            {
+                'position': 'suggestion_index_1', '_id': '_id_value_1', 'reasons': 'suggestion_reasons_1',
+                'score': 'suggestion_score_1', 'tile': 'tile_1'
+            },
+            target.get_tile.call_args_list[0][0][0]
+        )
+        self.assertDictEqual(
+            {
+                'position': 'suggestion_index_2', '_id': '_id_value_2', 'reasons': 'suggestion_reasons_2',
+                'score': 'suggestion_score_2', 'tile': 'tile_2'
+            },
+            target.get_tile.call_args_list[1][0][0]
+        )
+
+        self.assertEqual(2, content.product_cache.call_count)
+        self.assertEqual('_id_value_1', content.product_cache.call_args_list[0][0][0])
+        self.assertEqual('_id_value_2', content.product_cache.call_args_list[1][0][0])
 
 
 class on_next_page_message(TestCase):

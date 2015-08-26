@@ -5,8 +5,8 @@ from tornado.log import app_log
 from api.settings import CONTENT_URL
 from datetime import datetime
 
-class Content(object):
 
+class Content(object):
     def __init__(self, cache_maxsize):
         self.product_cache = FunctionCacheManager(self.get_from_service, cache_maxsize)
 

@@ -21,13 +21,37 @@ class WebSocket(Generic):
         if handler.id not in self._client_handlers:
             self._client_handlers[handler.id] = handler
 
-    def write_suggestion_items(self, handler: WebSocketHandler, suggestion_items: list):
+    def write_suggestion_items(self, handler: WebSocketHandler, suggestion_items_response: dict):
         handler.write_message(
             {
                 "type": "suggestion_items",
-                "items": suggestion_items
+                "items": self.fill_suggestions(suggestion_items_response["items"])
             }
         )
+
+    def fill_suggestions(self, suggestions):
+        items = []
+        for suggestion in suggestions:
+            new_suggestion = self._content.product_cache(suggestion["_id"])
+            if new_suggestion is not None:
+                new_suggestion["tile"] = self.get_tile(new_suggestion)
+                new_suggestion["score"] = suggestion["score"]
+                new_suggestion["reasons"] = suggestion["reasons"]
+                new_suggestion["_id"] = suggestion["_id"]
+                new_suggestion["position"] = suggestion["index"]
+                items.append(new_suggestion)
+        return items
+
+    def get_tile(self, suggestion):
+        for image in suggestion["images"]:
+            if "tiles" in image:
+                for tile in image["tiles"]:
+                    if tile["w"] == "w-md":
+                        return {
+                            "colspan": 1,
+                            "rowspan": 1 if tile["h"] == "h-md" else 2,
+                            "image_url": tile["path"]
+                        }
 
     def on_next_page_message(self, handler: WebSocketHandler, message: dict):
         suggestion_items, handler.offset = self.get_suggestion_items(
@@ -62,7 +86,7 @@ class WebSocket(Generic):
                 handler.user_id, handler.application_id, handler.session_id, handler.locale, self.get_context(handler)
             )
 
-            suggestion_items, handler.offset = self.get_suggestion_items(
+            suggestion_items_response, handler.offset = self.get_suggestion_items(
                 handler.user_id,
                 handler.application_id,
                 handler.session_id,
@@ -72,7 +96,7 @@ class WebSocket(Generic):
                 handler.offset
             )
 
-            self.write_suggestion_items(handler, suggestion_items)
+            self.write_suggestion_items(handler, suggestion_items_response)
 
         else:
             raise NotImplemented()
