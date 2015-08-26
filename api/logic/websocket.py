@@ -1,7 +1,6 @@
 from bson.json_util import dumps
 from tornado.escape import json_decode, json_encode, url_escape
 from tornado.httpclient import HTTPClient, HTTPRequest, HTTPError
-
 from api.logic.generic import Generic
 from api.handlers.websocket import WebSocket as WebSocketHandler
 from api.settings import CONTEXT_URL, DETECT_URL, SUGGEST_URL
@@ -20,6 +19,13 @@ class WebSocket(Generic):
 
         if handler.id not in self._client_handlers:
             self._client_handlers[handler.id] = handler
+
+        handler.write_message(
+            {
+                "type": "connection_opened",
+                "context_id": handler.context_id
+            }
+        )
 
     def write_suggestion_items(self, handler: WebSocketHandler, suggestion_items_response: dict):
         handler.write_message(

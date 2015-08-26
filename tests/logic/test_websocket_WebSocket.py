@@ -408,6 +408,12 @@ class open_Tests(TestCase):
         self.assertEqual("context_rev_value", handler.context_rev)
         self.assertEqual("context_id_value", handler.context_id)
 
+        self.assertEqual(1, handler.write_message.call_count)
+        self.assertDictEqual(
+            {'context_id': 'context_id_value', 'type': 'connection_opened'},
+            handler.write_message.call_args_list[0][0][0]
+        )
+
     def test_context_id_None(self):
         target = Target(
             content=None,
@@ -443,6 +449,12 @@ class open_Tests(TestCase):
             handler.context_rev
         )
 
+        self.assertEqual(1, handler.write_message.call_count)
+        self.assertDictEqual(
+            {'context_id': 'context_id_value', 'type': 'connection_opened'},
+            handler.write_message.call_args_list[0][0][0]
+        )
+
     def test_new_id(self):
         client_handlers = {
             "different_id": "existing_handler"
@@ -471,6 +483,12 @@ class open_Tests(TestCase):
 
         self.assertEqual(0, target.post_context.call_count)
 
+        self.assertEqual(1, handler.write_message.call_count)
+        self.assertDictEqual(
+            {'context_id': 'context_id', 'type': 'connection_opened'},
+            handler.write_message.call_args_list[0][0][0]
+        )
+
     def test_existing_id(self):
         client_handlers = {
             "existing_id": "existing_handler"
@@ -497,3 +515,8 @@ class open_Tests(TestCase):
         self.assertIsNone(handler._context)
 
         self.assertEqual(0, target.post_context.call_count)
+
+        self.assertEqual(1, handler.write_message.call_count)
+        self.assertDictEqual(
+            {'context_id': 'context_id', 'type': 'connection_opened'}, handler.write_message.call_args_list[0][0][0]
+        )
