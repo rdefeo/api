@@ -1,4 +1,4 @@
-from bson.json_util import dumps, loads
+from bson.json_util import dumps
 from tornado.escape import json_decode, json_encode, url_escape
 from tornado.httpclient import HTTPClient, HTTPRequest, HTTPError
 
@@ -54,7 +54,7 @@ class WebSocket(Generic):
                         }
 
     def on_next_page_message(self, handler: WebSocketHandler, message: dict):
-        suggestion_items, handler.offset = self.get_suggestion_items(
+        suggestion_items_response, handler.offset = self.get_suggestion_items(
             handler.user_id,
             handler.application_id,
             handler.session_id,
@@ -64,7 +64,19 @@ class WebSocket(Generic):
             handler.offset
         )
 
-        self.write_suggestion_items(handler, suggestion_items)
+        self.write_suggestion_items(handler, suggestion_items_response)
+
+    def on_view_product_details_message(self, handler: WebSocketHandler, message: dict):
+        handler.context_rev = self.post_context_feedback(
+            handler.context_id,
+            handler.user_id,
+            handler.application_id,
+            handler.session_id,
+            message["product_id"],
+            message["feedback_type"],
+            message["meta_data"] if "meta_data" in message else None
+        )
+        pass
 
     def on_home_page_message(self, handler: WebSocketHandler, message: dict):
         new_message_text = message["message_text"]
@@ -121,6 +133,8 @@ class WebSocket(Generic):
             self.on_home_page_message(handler, message)
         elif message["type"] == "next_page":
             self.on_next_page_message(handler, message)
+        elif message["type"] == "view_product_details":
+            self.on_view_product_details_message(handler, message)
         else:
             raise Exception("unknown message_type, type=%s,message=%s", message["type"], message)
         pass
@@ -182,6 +196,28 @@ class WebSocket(Generic):
                 request_body["detection"] = detection
 
             url = "%s/%s/messages/" % (CONTEXT_URL, context_id)
+            http_client = HTTPClient()
+            response = http_client.fetch(HTTPRequest(url=url, body=dumps(request_body), method="POST"))
+            http_client.close()
+            return response.headers["_rev"]
+        except HTTPError as e:
+            pass
+            raise
+
+    @staticmethod
+    def post_context_feedback(context_id: str, user_id: str, application_id: str, session_id: str,
+                              product_id: str, _type: str, meta_data: dict=None):
+        try:
+            request_body = {
+            }
+            if meta_data is not None:
+                request_body["meta_data"] = meta_data
+
+            url = "%s/%s/feedback/?application_id=%s&session_id=%s&product_id=%s&type=%s" % (
+                CONTEXT_URL, context_id, application_id, session_id, product_id, _type
+            )
+            url += "&user_id=%s" if user_id is not None else ""
+
             http_client = HTTPClient()
             response = http_client.fetch(HTTPRequest(url=url, body=dumps(request_body), method="POST"))
             http_client.close()

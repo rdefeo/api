@@ -5,6 +5,44 @@ from mock import Mock
 from api.logic.websocket import WebSocket as Target
 
 
+class on_view_product_details_message(TestCase):
+    def test_regular(self):
+        handler = Mock(name="handler_value")
+        handler.context_id = "context_id_value"
+        handler.user_id = "user_id_value"
+        handler.application_id = "application_id_value"
+        handler.session_id = "session_id_value"
+        handler.locale = "locale_value"
+        handler.suggest_id = "suggest_id_value"
+        handler.context_rev = "old_rev"
+
+        target = Target(None, None)
+        target.post_context_feedback = Mock(
+            return_value="new_rev"
+        )
+
+        target.on_view_product_details_message(
+            handler,
+            {
+                "product_id": "product_id_value",
+                "feedback_type": "type_value"
+            }
+        )
+
+        self.assertEqual(1, target.post_context_feedback.call_count)
+        self.assertEqual("context_id_value", target.post_context_feedback.call_args_list[0][0][0])
+        self.assertEqual("user_id_value", target.post_context_feedback.call_args_list[0][0][1])
+        self.assertEqual("application_id_value", target.post_context_feedback.call_args_list[0][0][2])
+        self.assertEqual("session_id_value", target.post_context_feedback.call_args_list[0][0][3])
+        self.assertEqual("product_id_value", target.post_context_feedback.call_args_list[0][0][4])
+        self.assertEqual("type_value", target.post_context_feedback.call_args_list[0][0][5])
+        self.assertIsNone(target.post_context_feedback.call_args_list[0][0][6])
+
+        self.assertEqual("context_id_value", handler.context_id)
+        self.assertEqual("suggest_id_value", handler.suggest_id)
+        self.assertEqual("new_rev", handler.context_rev)
+
+
 class fill_suggestions(TestCase):
     def test_regular(self):
         content = Mock()
@@ -208,6 +246,8 @@ class on_message(TestCase):
     def test_no_message_type(self):
         target = Target(None, None)
         target.on_home_page_message = Mock()
+        target.on_next_page_message = Mock()
+        target.on_view_product_details_message = Mock()
 
         self.assertRaises(
             Exception,
@@ -216,10 +256,14 @@ class on_message(TestCase):
         )
 
         self.assertEqual(0, target.on_home_page_message.call_count)
+        self.assertEqual(0, target.on_next_page_message.call_count)
+        self.assertEqual(0, target.on_view_product_details_message.call_count)
 
     def test_unknown_message_type(self):
         target = Target(None, None)
         target.on_home_page_message = Mock()
+        target.on_next_page_message = Mock()
+        target.on_view_product_details_message = Mock()
 
         self.assertRaises(
             Exception,
@@ -230,11 +274,14 @@ class on_message(TestCase):
         )
 
         self.assertEqual(0, target.on_home_page_message.call_count)
+        self.assertEqual(0, target.on_next_page_message.call_count)
+        self.assertEqual(0, target.on_view_product_details_message.call_count)
 
     def test_home_page_message(self):
         target = Target(None, None)
         target.on_home_page_message = Mock()
         target.on_next_page_message = Mock()
+        target.on_view_product_details_message = Mock()
 
         target.on_message(
             "handler_value",
@@ -253,11 +300,13 @@ class on_message(TestCase):
         )
 
         self.assertEqual(0, target.on_next_page_message.call_count)
+        self.assertEqual(0, target.on_view_product_details_message.call_count)
 
     def test_next_page_message(self):
         target = Target(None, None)
         target.on_home_page_message = Mock()
         target.on_next_page_message = Mock()
+        target.on_view_product_details_message = Mock()
 
         target.on_message(
             "handler_value",
@@ -276,6 +325,32 @@ class on_message(TestCase):
             target.on_next_page_message.call_args_list[0][0][1]
         )
 
+        self.assertEqual(0, target.on_view_product_details_message.call_count)
+
+    def test_view_product_message(self):
+        target = Target(None, None)
+        target.on_home_page_message = Mock()
+        target.on_next_page_message = Mock()
+        target.on_view_product_details_message = Mock()
+
+        target.on_message(
+            "handler_value",
+            {
+                "type": "view_product_details"
+            }
+        )
+
+        self.assertEqual(0, target.on_home_page_message.call_count)
+        self.assertEqual(0, target.on_next_page_message.call_count)
+
+        self.assertEqual(1, target.on_view_product_details_message.call_count)
+        self.assertEqual("handler_value", target.on_view_product_details_message.call_args_list[0][0][0])
+        self.assertDictEqual(
+            {
+                "type": "view_product_details"
+            },
+            target.on_view_product_details_message.call_args_list[0][0][1]
+        )
 
 class on_close(TestCase):
     def test_found(self):
