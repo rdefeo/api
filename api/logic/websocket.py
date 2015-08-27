@@ -1,4 +1,4 @@
-from bson.json_util import dumps
+from bson.json_util import dumps, loads
 from tornado.escape import json_decode, json_encode, url_escape
 from tornado.httpclient import HTTPClient, HTTPRequest, HTTPError
 from api.logic.generic import Generic
@@ -43,7 +43,7 @@ class WebSocket(Generic):
                 new_suggestion["tile"] = self.get_tile(new_suggestion)
                 new_suggestion["score"] = suggestion["score"]
                 new_suggestion["reasons"] = suggestion["reasons"]
-                new_suggestion["_id"] = suggestion["_id"]
+                new_suggestion["_id"] = str(suggestion["_id"])
                 new_suggestion["position"] = suggestion["index"]
                 items.append(new_suggestion)
         return items
@@ -290,4 +290,4 @@ class WebSocket(Generic):
 
         suggest_response = http_client.fetch(HTTPRequest(url=url, method="GET"))
         http_client.close()
-        return json_decode(suggest_response.body), suggest_response.headers["next_offset"]
+        return loads(suggest_response.body.decode("utf-8")), suggest_response.headers["next_offset"]
