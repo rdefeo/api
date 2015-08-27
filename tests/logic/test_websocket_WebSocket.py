@@ -189,7 +189,7 @@ class on_home_page_message(TestCase):
 
         target.write_suggestion_items = Mock()
 
-        target.on_home_page_message(
+        target.on_new_message(
             handler,
             {
                 "message_text": "message_text_value"
@@ -230,7 +230,7 @@ class on_home_page_message(TestCase):
         self.assertEqual("locale_value", target.get_suggestion_items.call_args_list[0][0][3])
         self.assertEqual("suggest_id_value", target.get_suggestion_items.call_args_list[0][0][4])
         self.assertEqual("page_size_value", target.get_suggestion_items.call_args_list[0][0][5])
-        self.assertEqual(0, target.get_suggestion_items.call_args_list[0][0][6])
+        self.assertEqual("offset_value", target.get_suggestion_items.call_args_list[0][0][6])
 
         self.assertEqual("context_id_value", handler.context_id)
         self.assertEqual("post_context_message_user_context_rev", handler.context_rev)
@@ -245,7 +245,7 @@ class on_home_page_message(TestCase):
 class on_message(TestCase):
     def test_no_message_type(self):
         target = Target(None, None)
-        target.on_home_page_message = Mock()
+        target.on_new_message = Mock()
         target.on_next_page_message = Mock()
         target.on_view_product_details_message = Mock()
 
@@ -255,13 +255,13 @@ class on_message(TestCase):
             {}
         )
 
-        self.assertEqual(0, target.on_home_page_message.call_count)
+        self.assertEqual(0, target.on_new_message.call_count)
         self.assertEqual(0, target.on_next_page_message.call_count)
         self.assertEqual(0, target.on_view_product_details_message.call_count)
 
     def test_unknown_message_type(self):
         target = Target(None, None)
-        target.on_home_page_message = Mock()
+        target.on_new_message = Mock()
         target.on_next_page_message = Mock()
         target.on_view_product_details_message = Mock()
 
@@ -273,13 +273,13 @@ class on_message(TestCase):
             }
         )
 
-        self.assertEqual(0, target.on_home_page_message.call_count)
+        self.assertEqual(0, target.on_new_message.call_count)
         self.assertEqual(0, target.on_next_page_message.call_count)
         self.assertEqual(0, target.on_view_product_details_message.call_count)
 
     def test_home_page_message(self):
         target = Target(None, None)
-        target.on_home_page_message = Mock()
+        target.on_new_message = Mock()
         target.on_next_page_message = Mock()
         target.on_view_product_details_message = Mock()
 
@@ -290,13 +290,44 @@ class on_message(TestCase):
             }
         )
 
-        self.assertEqual(1, target.on_home_page_message.call_count)
-        self.assertEqual("handler_value", target.on_home_page_message.call_args_list[0][0][0])
+        self.assertEqual(1, target.on_new_message.call_count)
+        self.assertEqual("handler_value", target.on_new_message.call_args_list[0][0][0])
         self.assertDictEqual(
             {
                 "type": "home_page_message"
             },
-            target.on_home_page_message.call_args_list[0][0][1]
+            target.on_new_message.call_args_list[0][0][1]
+        )
+        self.assertTrue(
+            target.on_new_message.call_args_list[0][1]["new_conversation"]
+        )
+
+        self.assertEqual(0, target.on_next_page_message.call_count)
+        self.assertEqual(0, target.on_view_product_details_message.call_count)
+
+    def test_new_message(self):
+        target = Target(None, None)
+        target.on_new_message = Mock()
+        target.on_next_page_message = Mock()
+        target.on_view_product_details_message = Mock()
+
+        target.on_message(
+            "handler_value",
+            {
+                "type": "new_message"
+            }
+        )
+
+        self.assertEqual(1, target.on_new_message.call_count)
+        self.assertEqual("handler_value", target.on_new_message.call_args_list[0][0][0])
+        self.assertDictEqual(
+            {
+                "type": "new_message"
+            },
+            target.on_new_message.call_args_list[0][0][1]
+        )
+        self.assertFalse(
+            target.on_new_message.call_args_list[0][1]["new_conversation"]
         )
 
         self.assertEqual(0, target.on_next_page_message.call_count)
@@ -304,7 +335,7 @@ class on_message(TestCase):
 
     def test_next_page_message(self):
         target = Target(None, None)
-        target.on_home_page_message = Mock()
+        target.on_new_message = Mock()
         target.on_next_page_message = Mock()
         target.on_view_product_details_message = Mock()
 
@@ -315,7 +346,7 @@ class on_message(TestCase):
             }
         )
 
-        self.assertEqual(0, target.on_home_page_message.call_count)
+        self.assertEqual(0, target.on_new_message.call_count)
         self.assertEqual(1, target.on_next_page_message.call_count)
         self.assertEqual("handler_value", target.on_next_page_message.call_args_list[0][0][0])
         self.assertDictEqual(
@@ -329,7 +360,7 @@ class on_message(TestCase):
 
     def test_view_product_message(self):
         target = Target(None, None)
-        target.on_home_page_message = Mock()
+        target.on_new_message = Mock()
         target.on_next_page_message = Mock()
         target.on_view_product_details_message = Mock()
 
@@ -340,7 +371,7 @@ class on_message(TestCase):
             }
         )
 
-        self.assertEqual(0, target.on_home_page_message.call_count)
+        self.assertEqual(0, target.on_new_message.call_count)
         self.assertEqual(0, target.on_next_page_message.call_count)
 
         self.assertEqual(1, target.on_view_product_details_message.call_count)

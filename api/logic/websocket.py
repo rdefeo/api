@@ -28,7 +28,7 @@ class WebSocket(Generic):
         )
 
     def write_suggestion_items(self, handler: WebSocketHandler, suggestion_items_response: dict):
-        handler.write_message(
+            handler.write_message(
             {
                 "type": "suggestion_items",
                 "items": self.fill_suggestions(suggestion_items_response["items"])
@@ -84,10 +84,11 @@ class WebSocket(Generic):
         )
         pass
 
-    def on_home_page_message(self, handler: WebSocketHandler, message: dict):
+    def on_new_message(self, handler: WebSocketHandler, message: dict, new_conversation: bool=False):
         new_message_text = message["message_text"]
         if len(new_message_text.strip()) > 0:
-            handler.offset = 0
+            if new_conversation:
+                handler.offset = 0
             detection_response_location = self.post_detect(
                 handler.user_id, handler.application_id, handler.session_id, handler.locale, new_message_text
             )
@@ -136,7 +137,9 @@ class WebSocket(Generic):
         if "type" not in message:
             raise Exception("missing message type,message=%s", message)
         elif message["type"] == "home_page_message":
-            self.on_home_page_message(handler, message)
+            self.on_new_message(handler, message, new_conversation=True)
+        elif message["type"] == "new_message":
+            self.on_new_message(handler, message, new_conversation=False)
         elif message["type"] == "next_page":
             self.on_next_page_message(handler, message)
         elif message["type"] == "view_product_details":
