@@ -5,6 +5,27 @@ from mock import Mock
 from api.logic.websocket import WebSocket as Target
 
 
+class write_thinking_message(TestCase):
+    def test_no_meta_data(self):
+        target = Target(None, None)
+        handler = Mock()
+        target.write_thinking_message(handler, "mode_value", None)
+
+        self.assertEqual(1, handler.write_message.call_count)
+        self.assertDictEqual(
+            {'thinking_mode': 'mode_value', 'type': 'start_thinking'}, handler.write_message.call_args_list[0][0][0])
+
+    def test_some_meta_data(self):
+        target = Target(None, None)
+        handler = Mock()
+        target.write_thinking_message(handler, "mode_value", "meta_data_value")
+
+        self.assertEqual(1, handler.write_message.call_count)
+        self.assertDictEqual(
+            {'thinking_mode': 'mode_value', 'meta_data': 'meta_data_value', 'type': 'start_thinking'},
+            handler.write_message.call_args_list[0][0][0])
+
+
 class on_view_product_details_message(TestCase):
     def test_regular(self):
         handler = Mock(name="handler_value")
@@ -126,6 +147,7 @@ class on_next_page_message(TestCase):
         )
 
         target.write_suggestion_items = Mock()
+        target.write_thinking_message = Mock()
 
         target.on_next_page_message(
             handler,
@@ -150,6 +172,8 @@ class on_next_page_message(TestCase):
         self.assertEqual(1, target.write_suggestion_items.call_count)
         self.assertEqual(handler, target.write_suggestion_items.call_args_list[0][0][0])
         self.assertEqual("suggestions_items_value", target.write_suggestion_items.call_args_list[0][0][1])
+
+        self.assertEqual(0, target.write_thinking_message.call_count)
 
 
 class on_home_page_message(TestCase):
@@ -188,6 +212,7 @@ class on_home_page_message(TestCase):
         )
 
         target.write_suggestion_items = Mock()
+        target.write_thinking_message = Mock()
 
         target.on_new_message(
             handler,
@@ -240,6 +265,13 @@ class on_home_page_message(TestCase):
         self.assertEqual(1, target.write_suggestion_items.call_count)
         self.assertEqual(handler, target.write_suggestion_items.call_args_list[0][0][0])
         self.assertEqual("suggestions_items_value", target.write_suggestion_items.call_args_list[0][0][1])
+
+        self.assertEqual(2, target.write_thinking_message.call_count)
+        self.assertEqual(handler, target.write_thinking_message.call_args_list[0][0][0])
+        self.assertEqual("conversation", target.write_thinking_message.call_args_list[0][0][1])
+
+        self.assertEqual(handler, target.write_thinking_message.call_args_list[1][0][0])
+        self.assertEqual("suggestions", target.write_thinking_message.call_args_list[1][0][1])
 
 
 class on_message(TestCase):
@@ -382,6 +414,7 @@ class on_message(TestCase):
             },
             target.on_view_product_details_message.call_args_list[0][0][1]
         )
+
 
 class on_close(TestCase):
     def test_found(self):

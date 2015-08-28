@@ -1,13 +1,16 @@
 from bson.json_util import dumps, loads
 from tornado.escape import json_decode, json_encode, url_escape
 from tornado.httpclient import HTTPClient, HTTPRequest, HTTPError
+
 from api.content import Content
-from api.logic.generic import Generic
+from api.logic import DetectLogic
 from api.handlers.websocket import WebSocket as WebSocketHandler
 from api.settings import CONTEXT_URL, DETECT_URL, SUGGEST_URL
 
 
-class WebSocket(Generic):
+class WebSocket:
+    detect = DetectLogic()
+
     def __init__(self, content: Content, client_handlers):
         self._content = content
         self._client_handlers = client_handlers
@@ -28,8 +31,19 @@ class WebSocket(Generic):
             }
         )
 
+    def write_thinking_message(self, handler: WebSocketHandler, thinking_mode: str, meta_data: dict=None):
+        message = {
+            "type": "start_thinking",
+            "thinking_mode": thinking_mode
+        }
+
+        if meta_data is not None:
+            message["meta_data"] = meta_data
+
+        handler.write_message(message)
+
     def write_suggestion_items(self, handler: WebSocketHandler, suggestion_items_response: dict):
-            handler.write_message(
+        handler.write_message(
             {
                 "type": "suggestion_items",
                 "items": self.fill_suggestions(suggestion_items_response["items"])
@@ -88,12 +102,15 @@ class WebSocket(Generic):
     def on_new_message(self, handler: WebSocketHandler, message: dict, new_conversation: bool=False):
         new_message_text = message["message_text"]
         if len(new_message_text.strip()) > 0:
+            self.write_thinking_message(handler, "conversation")
+            self.write_thinking_message(handler, "suggestions")
+
             handler.offset = 0
             detection_response_location = self.post_detect(
                 handler.user_id, handler.application_id, handler.session_id, handler.locale, new_message_text
             )
             detection_response = self.get_detect(detection_response_location)
-            # TODO non detected items
+            # TODO 25 non detected items
 
             handler.context_rev = self.post_context_message_user(
                 handler.context_id,
