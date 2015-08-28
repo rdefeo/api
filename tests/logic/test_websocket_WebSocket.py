@@ -46,7 +46,7 @@ class on_view_product_details_message(TestCase):
 class fill_suggestions(TestCase):
     def test_regular(self):
         content = Mock()
-        content.product_cache.side_effect = [
+        content.get_product.side_effect = [
             {
                 "_id": "new_suggestion_id_value_1"
             },
@@ -102,9 +102,9 @@ class fill_suggestions(TestCase):
             target.get_tile.call_args_list[1][0][0]
         )
 
-        self.assertEqual(2, content.product_cache.call_count)
-        self.assertEqual('_id_value_1', content.product_cache.call_args_list[0][0][0])
-        self.assertEqual('_id_value_2', content.product_cache.call_args_list[1][0][0])
+        self.assertEqual(2, content.get_product.call_count)
+        self.assertEqual('_id_value_1', content.get_product.call_args_list[0][0][0])
+        self.assertEqual('_id_value_2', content.get_product.call_args_list[1][0][0])
 
 
 class on_next_page_message(TestCase):
@@ -230,7 +230,7 @@ class on_home_page_message(TestCase):
         self.assertEqual("locale_value", target.get_suggestion_items.call_args_list[0][0][3])
         self.assertEqual("suggest_id_value", target.get_suggestion_items.call_args_list[0][0][4])
         self.assertEqual("page_size_value", target.get_suggestion_items.call_args_list[0][0][5])
-        self.assertEqual("offset_value", target.get_suggestion_items.call_args_list[0][0][6])
+        self.assertEqual(0, target.get_suggestion_items.call_args_list[0][0][6])
 
         self.assertEqual("context_id_value", handler.context_id)
         self.assertEqual("post_context_message_user_context_rev", handler.context_rev)

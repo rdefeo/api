@@ -1,13 +1,14 @@
 from bson.json_util import dumps, loads
 from tornado.escape import json_decode, json_encode, url_escape
 from tornado.httpclient import HTTPClient, HTTPRequest, HTTPError
+from api.content import Content
 from api.logic.generic import Generic
 from api.handlers.websocket import WebSocket as WebSocketHandler
 from api.settings import CONTEXT_URL, DETECT_URL, SUGGEST_URL
 
 
 class WebSocket(Generic):
-    def __init__(self, content, client_handlers):
+    def __init__(self, content: Content, client_handlers):
         self._content = content
         self._client_handlers = client_handlers
 
@@ -38,7 +39,7 @@ class WebSocket(Generic):
     def fill_suggestions(self, suggestions):
         items = []
         for suggestion in suggestions:
-            new_suggestion = self._content.product_cache(suggestion["_id"])
+            new_suggestion = self._content.get_product(suggestion["_id"])
             if new_suggestion is not None:
                 new_suggestion["tile"] = self.get_tile(new_suggestion)
                 new_suggestion["score"] = suggestion["score"]
@@ -87,8 +88,7 @@ class WebSocket(Generic):
     def on_new_message(self, handler: WebSocketHandler, message: dict, new_conversation: bool=False):
         new_message_text = message["message_text"]
         if len(new_message_text.strip()) > 0:
-            if new_conversation:
-                handler.offset = 0
+            handler.offset = 0
             detection_response_location = self.post_detect(
                 handler.user_id, handler.application_id, handler.session_id, handler.locale, new_message_text
             )
