@@ -1,3 +1,5 @@
+from logging import getLogger
+
 from bson.json_util import dumps, loads
 from tornado.escape import json_decode, json_encode, url_escape
 from tornado.httpclient import HTTPClient, HTTPRequest, HTTPError
@@ -9,6 +11,7 @@ from api.settings import CONTEXT_URL, DETECT_URL, SUGGEST_URL
 
 
 class WebSocket:
+    logger = getLogger(__name__)
     detect = DetectLogic()
 
     def __init__(self, content: Content, client_handlers):
@@ -169,18 +172,21 @@ class WebSocket:
         if handler.id in self._client_handlers:
             self._client_handlers.pop(handler.id, None)
 
-    @staticmethod
-    def get_context(handler: WebSocketHandler) -> dict:
-        if handler.context is None or handler.context["_rev"] != handler.context_rev:
-            http_client = HTTPClient()
-            url = "%s/%s" % (CONTEXT_URL, handler.context_id)
-            url += "?_rev=%s" % handler.context_rev if handler.context_rev is not None else ""
-            context_response = http_client.fetch(HTTPRequest(url=url, method="GET"))
-            http_client.close()
-            handler.context = json_decode(context_response.body)
-            handler.context_rev = handler.context["_rev"]
+    def get_context(self, handler: WebSocketHandler) -> dict:
+        try:
+            if handler.context is None or handler.context["_rev"] != handler.context_rev:
+                http_client = HTTPClient()
+                url = "%s/%s" % (CONTEXT_URL, handler.context_id)
+                url += "?_rev=%s" % handler.context_rev if handler.context_rev is not None else ""
+                context_response = http_client.fetch(HTTPRequest(url=url, method="GET"))
+                http_client.close()
+                handler.context = json_decode(context_response.body)
+                handler.context_rev = handler.context["_rev"]
 
-        return handler.context
+            return handler.context
+        except HTTPError as e:
+            self.logger.error("get_context,url=%s", url)
+            raise
 
     @staticmethod
     def post_context(user_id: str, application_id: str, session_id: str, locale: str) -> dict:

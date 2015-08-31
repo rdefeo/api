@@ -1,3 +1,4 @@
+from logging import DEBUG, getLogger
 from api.handlers.ask import Ask
 from api.handlers.chat import Chat
 from api.handlers.feedback import Feedback
@@ -18,6 +19,8 @@ client_handlers = {}
 
 class Application(tornado.web.Application):
     def __init__(self):
+        logger = getLogger(__name__)
+        logger.setLevel(DEBUG)
         from api.content import Content
         product_cache = Content(4096)
         ask_logic = AskLogic(product_cache)
