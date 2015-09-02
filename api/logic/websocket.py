@@ -49,6 +49,7 @@ class WebSocket:
         handler.write_message(
             {
                 "type": "suggestion_items",
+                "offset": suggestion_items_response["offset"],
                 "items": self.fill_suggestions(suggestion_items_response["items"])
             }
         )
@@ -258,13 +259,16 @@ class WebSocket:
             pass
             raise
 
-    @staticmethod
-    def get_detect(location: str) -> dict:
-        http_client = HTTPClient()
-        url = "%s%s" % (DETECT_URL, location)
-        context_response = http_client.fetch(HTTPRequest(url=url, method="GET"))
-        http_client.close()
-        return json_decode(context_response.body)
+    def get_detect(self, location: str) -> dict:
+        try:
+            http_client = HTTPClient()
+            url = "%s%s" % (DETECT_URL, location)
+            detect_response = http_client.fetch(HTTPRequest(url=url, method="GET"))
+            http_client.close()
+            return json_decode(detect_response.body)
+        except HTTPError as e:
+            self.logger.error("get_detect,url=%s", url)
+            raise
 
     @staticmethod
     def post_detect(user_id: str, application_id: str, session_id: str, locale: str, query: str) -> str:
