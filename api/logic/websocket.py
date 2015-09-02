@@ -30,7 +30,7 @@ class WebSocket:
         handler.write_message(
             {
                 "type": "connection_opened",
-                "context_id": handler.context_id
+                "context_id": str(handler.context_id)
             }
         )
 
@@ -139,7 +139,7 @@ class WebSocket:
             self.write_suggestion_items(handler, suggestion_items_response)
 
         else:
-            raise NotImplemented()
+            raise NotImplementedError()
 
             # context = self.get_detection_context(
             #     handler.user_id,
