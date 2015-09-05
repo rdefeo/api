@@ -237,26 +237,25 @@ class WebSocket:
             pass
             raise
 
-    @staticmethod
-    def post_context_feedback(context_id: str, user_id: str, application_id: str, session_id: str,
+    def post_context_feedback(self, context_id: str, user_id: str, application_id: str, session_id: str,
                               product_id: str, _type: str, meta_data: dict=None):
         try:
-            request_body = {
-            }
-            if meta_data is not None:
-                request_body["meta_data"] = meta_data
-
             url = "%s/%s/feedback/?application_id=%s&session_id=%s&product_id=%s&type=%s" % (
                 CONTEXT_URL, context_id, application_id, session_id, product_id, _type
             )
             url += "&user_id=%s" if user_id is not None else ""
+
+            request_body = {
+            }
+            if meta_data is not None:
+                request_body["meta_data"] = meta_data
 
             http_client = HTTPClient()
             response = http_client.fetch(HTTPRequest(url=url, body=dumps(request_body), method="POST"))
             http_client.close()
             return response.headers["_rev"]
         except HTTPError as e:
-            pass
+            self.logger.error("post_context_feedback,url=%s", url)
             raise
 
     def get_detect(self, location: str) -> dict:
