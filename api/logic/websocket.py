@@ -21,6 +21,10 @@ class WebSocket:
         self._client_handlers = client_handlers
 
     def open(self, handler: WebSocketHandler):
+        self.logger.debug(
+            "context_id=%s,suggestion_id=%s",
+            handler.context_id, handler.suggest_id
+        )
         if handler.context_id is None:
             handler.context_id, handler.context_rev = self.post_context(
                 handler.user_id, handler.application_id, handler.session_id, handler.locale
@@ -52,6 +56,7 @@ class WebSocket:
             {
                 "type": "suggestion_items",
                 "offset": suggestion_items_response["offset"],
+                "suggest_id": str(handler.suggest_id),
                 "items": self.fill_suggestions(suggestion_items_response["items"])
             }
         )
@@ -322,18 +327,27 @@ class WebSocket:
 
             return response.headers["_id"]
         except HTTPError as e:
+            self.logger.error("url=%s", url)
             raise
 
-    @staticmethod
-    def get_suggestion_items(user_id: str, application_id: str, session_id: str, locale: str, suggestion_id: str,
+    def get_suggestion_items(self, user_id: str, application_id: str, session_id: str, locale: str, suggestion_id: str,
                              page_size: int, offset: int) -> (dict, int):
-        http_client = HTTPClient()
-        url = "%s/%s/items?session_id=%s&application_id=%s&locale=%s&page_size=%s&offset=%s" % (
-            SUGGEST_URL, suggestion_id, session_id, application_id, locale, page_size, offset
+        self.logger.debug(
+            "user_id=%s,application_id=%s,session_id=%s,locale=%s,"
+            "suggestion_id=%s,page_size=%s,offset=%s",
+            user_id, application_id, session_id, locale, suggestion_id, page_size, offset
         )
+        try:
+            http_client = HTTPClient()
+            url = "%s/%s/items?session_id=%s&application_id=%s&locale=%s&page_size=%s&offset=%s" % (
+                SUGGEST_URL, suggestion_id, session_id, application_id, locale, page_size, offset
+            )
 
-        url += "&user_id=%s" % user_id if user_id is not None else ""
+            url += "&user_id=%s" % user_id if user_id is not None else ""
 
-        suggest_response = http_client.fetch(HTTPRequest(url=url, method="GET"))
-        http_client.close()
-        return loads(suggest_response.body.decode("utf-8")), suggest_response.headers["next_offset"]
+            suggest_response = http_client.fetch(HTTPRequest(url=url, method="GET"))
+            http_client.close()
+            return loads(suggest_response.body.decode("utf-8")), suggest_response.headers["next_offset"]
+        except HTTPError as e:
+            self.logger.error("url=%s", url)
+            raise

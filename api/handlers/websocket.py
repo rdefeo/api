@@ -34,10 +34,10 @@ class WebSocket(WebSocketHandler):
         self.application_id = self._param_extractor.application_id()
         self.context_id = self._param_extractor.context_id()
         self.session_id = self._param_extractor.session_id()
+        self.suggest_id = self._param_extractor.suggest_id()
         self.locale = self._param_extractor.locale()
         self.page_size = 20
         self.offset = 0
-        self.suggest_id = None
 
         self._logic.open(self)
 

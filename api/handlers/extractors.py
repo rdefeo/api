@@ -82,6 +82,22 @@ class ParamExtractor:
             )
             raise Finish()
 
+    def suggest_id(self) -> ObjectId:
+        raw_suggest_id = self.handler.get_argument("suggest_id", None)
+        try:
+            return ObjectId(raw_suggest_id) if raw_suggest_id is not None else None
+        except InvalidId:
+            self.handler.set_status(428)
+            self.handler.finish(
+                json_encode(
+                    {
+                        "status": "error",
+                        "message": "invalid param=suggest_id,suggest_id=%s" % raw_suggest_id
+                    }
+                )
+            )
+            raise Finish()
+
     def context_id(self) -> ObjectId:
         raw_context_id = self.handler.get_argument("context_id", None)
         try:
