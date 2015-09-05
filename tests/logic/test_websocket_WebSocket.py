@@ -138,7 +138,6 @@ class on_next_page_message(TestCase):
         handler.locale = "locale_value"
         handler.suggest_id = "suggest_id_value"
         handler.page_size = "page_size_value"
-        handler.offset = "original_offset_value"
 
         target = Target(None, None)
 
@@ -152,7 +151,7 @@ class on_next_page_message(TestCase):
         target.on_next_page_message(
             handler,
             {
-
+                "offset": "original_offset_value"
             }
         )
 
@@ -167,7 +166,6 @@ class on_next_page_message(TestCase):
 
         self.assertEqual("context_id_value", handler.context_id)
         self.assertEqual("suggest_id_value", handler.suggest_id)
-        self.assertEqual("new_offset_value", handler.offset)
 
         self.assertEqual(1, target.write_suggestion_items.call_count)
         self.assertEqual(handler, target.write_suggestion_items.call_args_list[0][0][0])
@@ -186,7 +184,6 @@ class on_home_page_message(TestCase):
         handler.locale = "locale_value"
         handler.skip_mongodb_log = "skip_mongodb_log_value"
         handler.page_size = "page_size_value"
-        handler.offset = "offset_value"
 
         target = Target(None, None)
         target.post_detect = Mock(
@@ -260,7 +257,6 @@ class on_home_page_message(TestCase):
         self.assertEqual("context_id_value", handler.context_id)
         self.assertEqual("post_context_message_user_context_rev", handler.context_rev)
         self.assertEqual("suggest_id_value", handler.suggest_id)
-        self.assertEqual("offset_value", handler.offset)
 
         self.assertEqual(1, target.write_suggestion_items.call_count)
         self.assertEqual(handler, target.write_suggestion_items.call_args_list[0][0][0])

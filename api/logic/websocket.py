@@ -51,11 +51,12 @@ class WebSocket:
 
         handler.write_message(message)
 
-    def write_suggestion_items(self, handler: WebSocketHandler, suggestion_items_response: dict):
+    def write_suggestion_items(self, handler: WebSocketHandler, suggestion_items_response: dict, offset: int, next_offset: int, ):
         handler.write_message(
             {
                 "type": "suggestion_items",
-                "offset": suggestion_items_response["offset"],
+                "next_offset": next_offset,
+                "offset": offset,
                 "suggest_id": str(handler.suggest_id),
                 "items": self.fill_suggestions(suggestion_items_response["items"])
             }
@@ -86,17 +87,17 @@ class WebSocket:
                         }
 
     def on_next_page_message(self, handler: WebSocketHandler, message: dict):
-        suggestion_items_response, handler.offset = self.get_suggestion_items(
+        suggestion_items_response, next_offset = self.get_suggestion_items(
             handler.user_id,
             handler.application_id,
             handler.session_id,
             handler.locale,
             handler.suggest_id,
             handler.page_size,
-            handler.offset
+            message["offset"]
         )
 
-        self.write_suggestion_items(handler, suggestion_items_response)
+        self.write_suggestion_items(handler, suggestion_items_response, message["offset"], next_offset)
 
     def on_view_product_details_message(self, handler: WebSocketHandler, message: dict):
         handler.context_rev = self.post_context_feedback(
@@ -116,7 +117,6 @@ class WebSocket:
             self.write_thinking_message(handler, "conversation")
             self.write_thinking_message(handler, "suggestions")
 
-            handler.offset = 0
             detection_response_location = self.post_detect(
                 handler.user_id, handler.application_id, handler.session_id, handler.locale, new_message_text
             )
@@ -132,18 +132,18 @@ class WebSocket:
             handler.suggest_id = self.post_suggest(
                 handler.user_id, handler.application_id, handler.session_id, handler.locale, self.get_context(handler)
             )
-
-            suggestion_items_response, handler.offset = self.get_suggestion_items(
+            offset = 0
+            suggestion_items_response, next_offset = self.get_suggestion_items(
                 handler.user_id,
                 handler.application_id,
                 handler.session_id,
                 handler.locale,
                 handler.suggest_id,
                 handler.page_size,
-                handler.offset
+                offset
             )
 
-            self.write_suggestion_items(handler, suggestion_items_response)
+            self.write_suggestion_items(handler, suggestion_items_response, offset, next_offset)
 
         else:
             raise NotImplementedError()

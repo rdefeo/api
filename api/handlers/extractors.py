@@ -114,7 +114,7 @@ class ParamExtractor:
             )
             raise Finish()
 
-    def locale(self):
+    def locale(self) -> str:
         locale = self.handler.get_argument("locale", None)
         if locale is None:
             self.handler.set_status(428)

@@ -37,8 +37,7 @@ class WebSocket(WebSocketHandler):
         self.suggest_id = self._param_extractor.suggest_id()
         self.locale = self._param_extractor.locale()
         self.page_size = 20
-        self.offset = 0
-
+        
         self._logic.open(self)
 
     def on_message(self, message):
