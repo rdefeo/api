@@ -1,4 +1,4 @@
-from logging import getLogger
+import logging
 
 from bson.json_util import dumps, loads
 from tornado.escape import json_decode, json_encode, url_escape
@@ -7,11 +7,13 @@ from tornado.httpclient import HTTPClient, HTTPRequest, HTTPError
 from api.content import Content
 from api.logic import DetectLogic
 from api.handlers.websocket import WebSocket as WebSocketHandler
-from api.settings import CONTEXT_URL, DETECT_URL, SUGGEST_URL
+from api.settings import CONTEXT_URL, DETECT_URL, SUGGEST_URL, LOGGING_LEVEL
 
 
 class WebSocket:
-    logger = getLogger(__name__)
+    logger = logging.getLogger(__name__)
+    logger.setLevel(LOGGING_LEVEL)
+
     detect = DetectLogic()
 
     def __init__(self, content: Content, client_handlers):
@@ -239,6 +241,11 @@ class WebSocket:
 
     def post_context_feedback(self, context_id: str, user_id: str, application_id: str, session_id: str,
                               product_id: str, _type: str, meta_data: dict=None):
+        self.logger.debug(
+            "context_id=%s,user_id=%s,application_id=%s,session_id=%s,product_id=%s,"
+            "_type=%s,meta_data=%s",
+            context_id, user_id, application_id, session_id, product_id, _type, meta_data
+        )
         try:
             url = "%s/%s/feedback/?application_id=%s&session_id=%s&product_id=%s&type=%s" % (
                 CONTEXT_URL, context_id, application_id, session_id, product_id, _type

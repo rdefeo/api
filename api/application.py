@@ -1,26 +1,25 @@
-from logging import DEBUG, getLogger
+from logging import DEBUG, getLogger, basicConfig
+
+import tornado
+import tornado.web
+import tornado.options
+
+from tornado.web import url
+
 from api.handlers.ask import Ask
 from api.handlers.chat import Chat
 from api.handlers.feedback import Feedback
 from api.handlers.proxy import Proxy
 from api.handlers.status import Status
 from api.handlers.cache import Cache
-
-import tornado
-import tornado.web
-import tornado.options
-from tornado.web import url
 from api.handlers.websocket import WebSocket
 from api.logic.ask import Ask as AskLogic
-from api.logic.websocket import WebSocket as WebSocketLogic
 
 client_handlers = {}
 
 
 class Application(tornado.web.Application):
     def __init__(self):
-        logger = getLogger(__name__)
-        logger.setLevel(DEBUG)
         from api.content import Content
         product_cache = Content(4096)
         ask_logic = AskLogic(product_cache)
@@ -34,7 +33,8 @@ class Application(tornado.web.Application):
             # /ws/context
             # /rs/context
             # /rs/context/messages
-            url(r"/websocket", WebSocket, dict(content=product_cache, client_handlers=client_handlers), name="websocket"),
+            url(r"/websocket", WebSocket, dict(content=product_cache, client_handlers=client_handlers),
+                name="websocket"),
             url(r"/ask", Ask, dict(logic=ask_logic), name="ask"),
             url(r"/cache", Cache, dict(product_cache=product_cache), name="cache"),
             url(r"/chat", Chat, dict(logic=ask_logic), name="chat"),

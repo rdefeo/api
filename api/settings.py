@@ -1,3 +1,5 @@
+import logging
+
 __author__ = 'robdefeo'
 import os
 
@@ -21,3 +23,5 @@ CONTEXT_URL = get_env_setting("API_CONTEXT_URL", "http://0.0.0.0:17999")
 CONTENT_URL = get_env_setting("API_CONTENT_URL", "http://content.jemboo.com")
 
 CONTENT_CACHE_SIZE = int(get_env_setting("API_CONTENT_CACHE_SIZE", 4096))
+
+LOGGING_LEVEL = logging.DEBUG
