@@ -266,6 +266,7 @@ class WebSocket:
             raise
 
     def get_detect(self, location: str) -> dict:
+        self.logger.debug("location=%s", location)
         try:
             http_client = HTTPClient()
             url = "%s%s" % (DETECT_URL, location)
@@ -276,8 +277,12 @@ class WebSocket:
             self.logger.error("get_detect,url=%s", url)
             raise
 
-    @staticmethod
-    def post_detect(user_id: str, application_id: str, session_id: str, locale: str, query: str) -> str:
+    def post_detect(self, user_id: str, application_id: str, session_id: str, locale: str, query: str) -> str:
+        self.logger.debug(
+            "user_id=%s,application_id=%s,session_id=%s,locale=%s,query=%s",
+            user_id, application_id, session_id, locale, query
+        )
+
         url = "%s?application_id=%s&session_id=%s&locale=%s&q=%s" % (
             DETECT_URL,
             application_id,
@@ -293,8 +298,13 @@ class WebSocket:
         http_client.close()
         return response.headers["Location"]
 
-    @staticmethod
-    def post_suggest(user_id: str, application_id: str, session_id: str, locale: str, context: dict) -> str:
+    def post_suggest(self, user_id: str, application_id: str, session_id: str, locale: str, context: dict) -> str:
+        self.logger.debug(
+            "user_id=%s,application_id=%s,session_id=%s,locale=%s,"
+            "context=%s",
+            user_id, application_id, session_id, locale, context
+        )
+
         try:
             request_body = {
                 "context": context
