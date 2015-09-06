@@ -164,7 +164,10 @@ class WebSocket:
     def on_message(self, handler: WebSocketHandler, message: dict):
         if "type" not in message:
             raise Exception("missing message type,message=%s", message)
-        elif message["type"] == "home_page_message":
+
+        self.logger.debug("message_type=%s,message=%s", message["type"], message)
+
+        if message["type"] == "home_page_message":
             self.on_new_message(handler, message, new_conversation=True)
         elif message["type"] == "new_message":
             self.on_new_message(handler, message, new_conversation=False)
@@ -178,11 +181,14 @@ class WebSocket:
 
     def on_close(self, handler: WebSocketHandler):
         if handler.id in self._client_handlers:
+            self.logger.debug("remove_handler,handler_id=%s", handler.id)
             self._client_handlers.pop(handler.id, None)
 
     def get_context(self, handler: WebSocketHandler) -> dict:
         try:
             if handler.context is None or handler.context["_rev"] != handler.context_rev:
+                self.logger.debug(
+                    "get_context_from_service,context_id=%s,_rev=%s", handler.context_id, handler.context_rev)
                 http_client = HTTPClient()
                 url = "%s/%s" % (CONTEXT_URL, handler.context_id)
                 url += "?_rev=%s" % handler.context_rev if handler.context_rev is not None else ""
@@ -196,8 +202,11 @@ class WebSocket:
             self.logger.error("get_context,url=%s", url)
             raise
 
-    @staticmethod
-    def post_context(user_id: str, application_id: str, session_id: str, locale: str) -> dict:
+    def post_context(self, user_id: str, application_id: str, session_id: str, locale: str) -> dict:
+        self.logger.debug(
+            "user_id=%s,application_id=%s,session_id=%s,locale=%s",
+            user_id, application_id, session_id, locale
+        )
         try:
             request_body = {}
             #     # this now goes at message level
@@ -225,8 +234,11 @@ class WebSocket:
             message_text=message_text
         )
 
-    @staticmethod
-    def post_context_message(context_id: str, direction: int, message_text: str, detection: dict=None):
+    def post_context_message(self, context_id: str, direction: int, message_text: str, detection: dict=None):
+        self.logger.debug(
+            "context_id=%s,direction=%s,message_text=%s,detection=%s",
+            context_id, direction, message_text, detection
+        )
         try:
             request_body = {
                 "direction": direction,
