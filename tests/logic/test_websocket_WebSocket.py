@@ -175,7 +175,7 @@ class on_next_page_message(TestCase):
 
 
 class on_home_page_message(TestCase):
-    def test_regular(self):
+    def test_no_non_detections(self):
         handler = Mock(name="handler_value")
         handler.context_id = "context_id_value"
         handler.user_id = "user_id_value"
@@ -186,6 +186,10 @@ class on_home_page_message(TestCase):
         handler.page_size = "page_size_value"
 
         target = Target(None, None)
+        target.detect.respond_to_detection_response = Mock(
+            return_value=None
+        )
+
         target.post_detect = Mock(
             return_value="detection_location_response"
         )
@@ -228,6 +232,10 @@ class on_home_page_message(TestCase):
         self.assertEqual(1, target.get_detect.call_count)
 
         self.assertEqual("detection_location_response", target.get_detect.call_args_list[0][0][0])
+
+        self.assertEqual(1, target.detect.respond_to_detection_response.call_count)
+        self.assertEqual(handler, target.detect.respond_to_detection_response.call_args_list[0][0][0])
+        self.assertEqual("detection_response", target.detect.respond_to_detection_response.call_args_list[0][0][1])
 
         self.assertEqual(1, target.post_context_message_user.call_count)
         self.assertEqual("context_id_value", target.post_context_message_user.call_args_list[0][0][0])

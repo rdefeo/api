@@ -14,9 +14,8 @@ class WebSocket:
     logger = logging.getLogger(__name__)
     logger.setLevel(LOGGING_LEVEL)
 
-    detect = DetectLogic()
-
     def __init__(self, content: Content, client_handlers):
+        self.detect = DetectLogic()
         self._content = content
         self._client_handlers = client_handlers
 
@@ -40,6 +39,13 @@ class WebSocket:
             }
         )
 
+    def write_jemboo_response_message(self, handler: WebSocketHandler, message: dict):
+        message["type"] = "jemboo_chat_response"
+        message["direction"] = 0 # jemboo
+        # TODO store this message in the context too
+
+        handler.write_message(message)
+
     def write_thinking_message(self, handler: WebSocketHandler, thinking_mode: str, meta_data: dict=None):
         message = {
             "type": "start_thinking",
@@ -51,7 +57,8 @@ class WebSocket:
 
         handler.write_message(message)
 
-    def write_suggestion_items(self, handler: WebSocketHandler, suggestion_items_response: dict, offset: int, next_offset: int, ):
+    def write_suggestion_items(self, handler: WebSocketHandler, suggestion_items_response: dict, offset: int,
+                               next_offset: int, ):
         handler.write_message(
             {
                 "type": "suggestion_items",
@@ -121,7 +128,10 @@ class WebSocket:
                 handler.user_id, handler.application_id, handler.session_id, handler.locale, new_message_text
             )
             detection_response = self.get_detect(detection_response_location)
-            # TODO 25 non detected items
+
+            detection_chat_response = self.detect.respond_to_detection_response(handler, detection_response)
+            if detection_chat_response is not None:
+                self.write_jemboo_response_message(handler, detection_chat_response)
 
             handler.context_rev = self.post_context_message_user(
                 handler.context_id,
