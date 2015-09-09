@@ -7,6 +7,7 @@ from tornado.httpclient import HTTPClient, HTTPRequest, HTTPError
 from api.content import Content
 from api.logic import DetectLogic
 from api.handlers.websocket import WebSocket as WebSocketHandler
+from api.logic.message_response import MessageResponse
 from api.settings import CONTEXT_URL, DETECT_URL, SUGGEST_URL, LOGGING_LEVEL
 
 
@@ -16,6 +17,7 @@ class WebSocket:
 
     def __init__(self, content: Content, client_handlers):
         self.detect = DetectLogic()
+        self.message_response = MessageResponse()
         self._content = content
         self._client_handlers = client_handlers
 
@@ -119,11 +121,11 @@ class WebSocket:
         pass
 
     def on_new_message(self, handler: WebSocketHandler, message: dict, new_conversation: bool=False):
-        new_message_text = message["message_text"]
-        if len(new_message_text.strip()) > 0:
-            self.write_thinking_message(handler, "conversation")
-            self.write_thinking_message(handler, "suggestions")
+        self.write_thinking_message(handler, "conversation")
+        self.write_thinking_message(handler, "suggestions")
 
+        new_message_text = message["message_text"] if "message_text" in message else ""
+        if len(new_message_text.strip()) > 0:
             detection_response_location = self.post_detect(
                 handler.user_id, handler.application_id, handler.session_id, handler.locale, new_message_text
             )
@@ -156,20 +158,26 @@ class WebSocket:
             self.write_suggestion_items(handler, suggestion_items_response, offset, next_offset)
 
         else:
-            raise NotImplementedError()
-
-            # context = self.get_detection_context(
-            #     handler.user_id,
-            #     handler.application_id,
-            #     handler.session_id,
-            #     None,  # TODO use the actual context id
-            #     handler.locale,
-            #     new_message_text,
-            #     handler.skip_mongodb_log
-            # )
-            # pass
-            # create new_context
-            # go to detection if it has a query
+            context = self.get_context(handler)
+            if not any(x for x in context["entities"] if x["source"] == "detection"):
+                handler.suggest_id = self.post_suggest(
+                    handler.user_id, handler.application_id, handler.session_id, handler.locale, context
+                )
+                offset = 0
+                suggestion_items_response, next_offset = self.get_suggestion_items(
+                    handler.user_id,
+                    handler.application_id,
+                    handler.session_id,
+                    handler.locale,
+                    handler.suggest_id,
+                    handler.page_size,
+                    offset
+                )
+                self.write_jemboo_response_message(handler, self.message_response.no_search_query_given())
+                self.write_suggestion_items(handler, suggestion_items_response, offset, next_offset)
+            else:
+                pass
+                # TODO No idea what to do here
 
     def on_message(self, handler: WebSocketHandler, message: dict):
         if "type" not in message:

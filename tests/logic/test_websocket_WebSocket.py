@@ -174,7 +174,87 @@ class on_next_page_message(TestCase):
         self.assertEqual(0, target.write_thinking_message.call_count)
 
 
-class on_home_page_message(TestCase):
+class on_new_message(TestCase):
+    def test_no_message_no_detected_entities_in_context(self):
+        handler = Mock(name="handler_value")
+        handler.context_id = "context_id_value"
+        handler.user_id = "user_id_value"
+        handler.application_id = "application_id_value"
+        handler.session_id = "session_id_value"
+        handler.locale = "locale_value"
+        handler.skip_mongodb_log = "skip_mongodb_log_value"
+        handler.page_size = "page_size_value"
+
+        target = Target(None, None)
+        target.detect.respond_to_detection_response = Mock(
+            return_value=None
+        )
+
+        target.get_context = Mock(
+            return_value={
+                "entities": [
+                    {
+                        "source": "non_detection"
+                    }
+                ]
+            }
+        )
+
+        target.post_suggest = Mock(
+            return_value="suggest_id_value"
+        )
+
+        target.get_suggestion_items = Mock(
+            return_value=("suggestions_items_value", "offset_value")
+        )
+
+        target.write_suggestion_items = Mock()
+        target.write_thinking_message = Mock()
+
+        target.on_new_message(
+            handler,
+            {
+                "message_text": ""
+            }
+        )
+
+        self.assertEqual(1, target.get_context.call_count)
+
+        self.assertEqual(handler, target.get_context.call_args_list[0][0][0])
+
+        self.assertEqual(1, target.post_suggest.call_count)
+        self.assertEqual("user_id_value", target.post_suggest.call_args_list[0][0][0])
+        self.assertEqual("application_id_value", target.post_suggest.call_args_list[0][0][1])
+        self.assertEqual("session_id_value", target.post_suggest.call_args_list[0][0][2])
+        self.assertEqual("locale_value", target.post_suggest.call_args_list[0][0][3])
+        self.assertDictEqual(
+            {'entities': [{'source': 'non_detection'}]},
+            target.post_suggest.call_args_list[0][0][4]
+        )
+
+        self.assertEqual(1, target.get_suggestion_items.call_count)
+        self.assertEqual("user_id_value", target.get_suggestion_items.call_args_list[0][0][0])
+        self.assertEqual("application_id_value", target.get_suggestion_items.call_args_list[0][0][1])
+        self.assertEqual("session_id_value", target.get_suggestion_items.call_args_list[0][0][2])
+        self.assertEqual("locale_value", target.get_suggestion_items.call_args_list[0][0][3])
+        self.assertEqual("suggest_id_value", target.get_suggestion_items.call_args_list[0][0][4])
+        self.assertEqual("page_size_value", target.get_suggestion_items.call_args_list[0][0][5])
+        self.assertEqual(0, target.get_suggestion_items.call_args_list[0][0][6])
+
+        self.assertEqual("context_id_value", handler.context_id)
+        self.assertEqual("suggest_id_value", handler.suggest_id)
+
+        self.assertEqual(1, target.write_suggestion_items.call_count)
+        self.assertEqual(handler, target.write_suggestion_items.call_args_list[0][0][0])
+        self.assertEqual("suggestions_items_value", target.write_suggestion_items.call_args_list[0][0][1])
+
+        self.assertEqual(2, target.write_thinking_message.call_count)
+        self.assertEqual(handler, target.write_thinking_message.call_args_list[0][0][0])
+        self.assertEqual("conversation", target.write_thinking_message.call_args_list[0][0][1])
+
+        self.assertEqual(handler, target.write_thinking_message.call_args_list[1][0][0])
+        self.assertEqual("suggestions", target.write_thinking_message.call_args_list[1][0][1])
+
     def test_no_non_detections(self):
         handler = Mock(name="handler_value")
         handler.context_id = "context_id_value"
