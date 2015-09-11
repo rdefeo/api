@@ -32,6 +32,7 @@ class WebSocket:
             )
 
         if handler.id not in self._client_handlers:
+            # TODO this is where we realise if it has actually been properly opened or just re-opening maybe there should be a parameter on the connection url
             self._client_handlers[handler.id] = handler
 
         handler.write_message(
@@ -41,9 +42,17 @@ class WebSocket:
             }
         )
 
+    def on_close(self, handler: WebSocketHandler):
+        if handler.id in self._client_handlers:
+            self.logger.debug(
+                "remove_handler,close_code=%s,context_id=%s,context_rev=%s,handler_id=%s",
+                handler.close_code, handler.context_id, handler.context_rev, handler.id
+            )
+            self._client_handlers.pop(handler.id, None)
+
     def write_jemboo_response_message(self, handler: WebSocketHandler, message: dict):
         message["type"] = "jemboo_chat_response"
-        message["direction"] = 0 # jemboo
+        message["direction"] = 0  # jemboo
         # TODO store this message in the context too
 
         handler.write_message(message)
@@ -196,11 +205,6 @@ class WebSocket:
         else:
             raise Exception("unknown message_type, type=%s,message=%s", message["type"], message)
         pass
-
-    def on_close(self, handler: WebSocketHandler):
-        if handler.id in self._client_handlers:
-            self.logger.debug("remove_handler,handler_id=%s", handler.id)
-            self._client_handlers.pop(handler.id, None)
 
     def get_context(self, handler: WebSocketHandler) -> dict:
         try:
