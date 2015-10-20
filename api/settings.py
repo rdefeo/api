@@ -24,4 +24,6 @@ CONTENT_URL = get_env_setting("API_CONTENT_URL", "http://content.jemboo.com")
 
 CONTENT_CACHE_SIZE = int(get_env_setting("API_CONTENT_CACHE_SIZE", 4096))
 
+TILE_IMAGE_PATH = get_env_setting("API_TILE_IMAGE_PATH", "https://d2xtl1bsv2jbx1.cloudfront.net/")
+
 LOGGING_LEVEL = logging.DEBUG

@@ -1,8 +1,9 @@
 from tornado.escape import url_escape, json_decode, json_encode
 from tornado.httpclient import HTTPRequest, HTTPClient
+from tornado.log import app_log
+
 from api.logic.generic import Generic
 from api.settings import DETECT_URL, SUGGEST_URL, CONTEXT_URL
-from tornado.log import app_log
 
 
 class Ask(Generic):
@@ -11,7 +12,7 @@ class Ask(Generic):
 
     @staticmethod
     def get_wit_detection(user_id, application_id, session_id, locale, query, context):
-        url="%s/wit?application_id=%s&session_id=%s&locale=%s&q=%s" % (
+        url = "%s/wit?application_id=%s&session_id=%s&locale=%s&q=%s" % (
             DETECT_URL,
             application_id,
             session_id,
@@ -33,12 +34,14 @@ class Ask(Generic):
         if query is not None:
             detection_response = self.get_wit_detection(user_id, application_id, session_id, locale, query, context)
             # now don't pass the context_id cus for sure it will be replaced by the new detection
-            context = self.get_context(user_id, application_id, session_id, locale, detection_response, context_id, skip_mongodb_log)
+            context = self.get_context(user_id, application_id, session_id, locale, detection_response, context_id,
+                                       skip_mongodb_log)
             return context, detection_response
         else:
             return context, None
 
-    def get_context(self, user_id, application_id, session_id, locale, detection_response, context_id, skip_mongodb_log):
+    def get_context(self, user_id, application_id, session_id, locale, detection_response, context_id,
+                    skip_mongodb_log):
         if context_id is None or detection_response is not None:
             request_body = {}
             if detection_response is not None:
@@ -80,7 +83,8 @@ class Ask(Generic):
             user_id, application_id, session_id, context_id, locale, query, skip_mongodb_log
         )
 
-        suggest_response = self.get_suggestion(user_id, application_id, session_id, locale, offset, page_size, context, skip_mongodb_log)
+        suggest_response = self.get_suggestion(user_id, application_id, session_id, locale, offset, page_size, context,
+                                               skip_mongodb_log)
         suggestions = self.fill_suggestions(suggest_response["suggestions"])
 
         response = {
@@ -125,7 +129,8 @@ class Ask(Generic):
     def build_header_link(self, href, rel):
         return "<%s>; rel=\"%s\"" % (href, rel)
 
-    def build_header_links(self, host, path, user_id, application_id, session_id, context_id, locale, offset, page_size):
+    def build_header_links(self, host, path, user_id, application_id, session_id, context_id, locale, offset,
+                           page_size):
         links = [
             self.build_header_link(
                 self.build_link(
@@ -174,7 +179,7 @@ class Ask(Generic):
             )
         return links
 
-    def build_link(self, host, path, user_id, application_id, session_id,  context_id, locale, offset, page_size):
+    def build_link(self, host, path, user_id, application_id, session_id, context_id, locale, offset, page_size):
         return "http://%s%s?application_id=%s&session_id=%s&user_id=%s&context_id=%s&locale=%s&offset=%s&page_size=%s" % (
             host,
             path,
@@ -198,11 +203,11 @@ class Ask(Generic):
             url_escape(json_encode(context))
         )
         if user_id is not None:
-                url += "&user_id=%s" % user_id
+            url += "&user_id=%s" % user_id
         if skip_mongodb_log:
             url += "&skip_mongodb_log"
 
-        app_log.debug("get_suggestions,url=%s",url)
+        app_log.debug("get_suggestions,url=%s", url)
         http_client = HTTPClient()
         suggest_response = http_client.fetch(
             HTTPRequest(
@@ -213,7 +218,7 @@ class Ask(Generic):
         return json_decode(suggest_response.body)
 
     def get_detection(self, user_id, application_id, session_id, locale, query, context):
-        url="%s?application_id=%s&session_id=%s&locale=%s&q=%s" % (
+        url = "%s?application_id=%s&session_id=%s&locale=%s&q=%s" % (
             DETECT_URL,
             application_id,
             session_id,

@@ -1,3 +1,4 @@
+from collections import defaultdict
 from logging import DEBUG, getLogger, basicConfig
 
 import tornado
@@ -15,7 +16,7 @@ from api.handlers.cache import Cache
 from api.handlers.websocket import WebSocket
 from api.logic.ask import Ask as AskLogic
 
-client_handlers = {}
+client_handlers = defaultdict(dict)
 
 
 class Application(tornado.web.Application):
