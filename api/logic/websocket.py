@@ -18,7 +18,7 @@ class WebSocket:
 
     def __init__(self, content: Content, client_handlers):
         self.sender = Sender(client_handlers)
-        self.detect = DetectLogic()
+        self.detect = DetectLogic(self.sender)
         self.message_response = MessageResponse()
         self._content = content
         self._client_handlers = client_handlers
