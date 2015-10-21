@@ -9,21 +9,34 @@ class write_thinking_message(TestCase):
     def test_no_meta_data(self):
         target = Target(None, None)
         handler = Mock()
+        target.write_to_context_handlers = Mock()
         target.write_thinking_message(handler, "mode_value", None)
 
-        self.assertEqual(1, handler.write_message.call_count)
+        self.assertEqual(1, target.write_to_context_handlers.call_count)
+        self.assertEqual(
+            handler,
+            target.write_to_context_handlers.call_args_list[0][0][0]
+        )
         self.assertDictEqual(
-            {'thinking_mode': 'mode_value', 'type': 'start_thinking'}, handler.write_message.call_args_list[0][0][0])
+            {'thinking_mode': 'mode_value', 'type': 'start_thinking'},
+            target.write_to_context_handlers.call_args_list[0][0][1]
+        )
 
     def test_some_meta_data(self):
         target = Target(None, None)
         handler = Mock()
+        target.write_to_context_handlers = Mock()
         target.write_thinking_message(handler, "mode_value", "meta_data_value")
 
-        self.assertEqual(1, handler.write_message.call_count)
+        self.assertEqual(1, target.write_to_context_handlers.call_count)
+        self.assertEqual(
+            handler,
+            target.write_to_context_handlers.call_args_list[0][0][0]
+        )
         self.assertDictEqual(
-            {'thinking_mode': 'mode_value', 'meta_data': 'meta_data_value', 'type': 'start_thinking'},
-            handler.write_message.call_args_list[0][0][0])
+            {'meta_data': 'meta_data_value', 'thinking_mode': 'mode_value', 'type': 'start_thinking'},
+            target.write_to_context_handlers.call_args_list[0][0][1]
+        )
 
 
 class on_view_product_details_message(TestCase):
@@ -151,6 +164,7 @@ class on_next_page_message(TestCase):
         target.on_next_page_message(
             handler,
             {
+                "suggest_id": "suggest_id_value",
                 "offset": "original_offset_value"
             }
         )
@@ -503,19 +517,27 @@ class on_message(TestCase):
 class on_close(TestCase):
     def test_found(self):
         client_handlers = {
-            "existing_id": "existing_handler",
-            "random_id": "other_handler"
+            "existing_context_id": {
+                "existing_handler_id": "existing_handler"
+            },
+            "random_context_id": {
+                "random_handler_id": "random_handler"
+            }
         }
         target = Target(
             content=None,
             client_handlers=client_handlers
         )
         handler = Mock(name="new_client_handler")
-        handler.id = "existing_id"
+        handler.context_id = "existing_context_id"
+        handler.id = "existing_handler_id"
         target.on_close(handler)
 
         self.assertDictEqual(
-            {'random_id': 'other_handler'},
+            {
+                'existing_context_id': {},
+                'random_context_id': {'random_handler_id': 'random_handler'}
+            },
             client_handlers
         )
 
@@ -588,14 +610,8 @@ class open_Tests(TestCase):
         self.assertEqual("session_id_value", target.post_context.call_args_list[0][0][2])
         self.assertEqual("locale_value", target.post_context.call_args_list[0][0][3])
 
-        self.assertEqual(
-            "context_id_value",
-            handler.context_id
-        )
-        self.assertEqual(
-            "context_rev_value",
-            handler.context_rev
-        )
+        self.assertEqual("context_id_value", handler.context_id)
+        self.assertEqual("context_rev_value", handler.context_rev)
 
         self.assertEqual(1, handler.write_message.call_count)
         self.assertDictEqual(

@@ -8,6 +8,7 @@ from api.content import Content
 from api.logic import DetectLogic
 from api.handlers.websocket import WebSocket as WebSocketHandler
 from api.logic.message_response import MessageResponse
+from api.logic.sender import Sender
 from api.settings import CONTEXT_URL, DETECT_URL, SUGGEST_URL, LOGGING_LEVEL, TILE_IMAGE_PATH
 
 
@@ -16,6 +17,7 @@ class WebSocket:
     logger.setLevel(LOGGING_LEVEL)
 
     def __init__(self, content: Content, client_handlers):
+        self.sender = Sender(client_handlers)
         self.detect = DetectLogic()
         self.message_response = MessageResponse()
         self._content = content
@@ -39,7 +41,7 @@ class WebSocket:
             self.logger.debug("add handler, context_id=%s,handler_id=%s", str(handler.context_id), handler.id)
             self._client_handlers[str(handler.context_id)][handler.id] = handler
 
-        self.write_to_context_handlers(
+        self.sender.write_to_context_handlers(
             handler,
             {
                 "type": "connection_opened",
@@ -59,30 +61,31 @@ class WebSocket:
             )
 
     def on_close(self, handler: WebSocketHandler):
-        if str(handler.context_id) in self._client_handlers and handler.id in self._client_handlers[str(handler.context_id)]:
+        handler_id_in_client_handlers = str(handler.context_id) in self._client_handlers
+        if handler_id_in_client_handlers and handler.id in self._client_handlers[str(handler.context_id)]:
             self.logger.debug(
                 "remove_handler,close_code=%s,context_id=%s,context_rev=%s,handler_id=%s",
                 handler.close_code, str(handler.context_id), str(handler.context_rev), handler.id
             )
             self._client_handlers[str(handler.context_id)].pop(handler.id, None)
 
-    def write_to_context_handlers(self, handler: WebSocketHandler, message: dict):
-        handlers = self._client_handlers[str(handler.context_id)].values()
-        self.logger.info(
-            "write message context_id=%s,type=%s,handlers_length=%s",
-            str(handler.context_id), message["type"], len(handlers))
-        for x in handlers:
-            self.logger.info("write message context_id=%s,type=%s,handler_id=%s",
-                             str(handler.context_id), message["type"],
-                             x.id)
-            x.write_message(message)
+    # def write_to_context_handlers(self, handler: WebSocketHandler, message: dict):
+    #     handlers = self._client_handlers[str(handler.context_id)].values()
+    #     self.logger.info(
+    #         "write message context_id=%s,type=%s,handlers_length=%s",
+    #         str(handler.context_id), message["type"], len(handlers))
+    #     for x in handlers:
+    #         self.logger.info("write message context_id=%s,type=%s,handler_id=%s",
+    #                          str(handler.context_id), message["type"],
+    #                          x.id)
+    #         x.write_message(message)
 
     def write_jemboo_response_message(self, handler: WebSocketHandler, message: dict):
         message["type"] = "jemboo_chat_response"
         message["direction"] = 0  # jemboo
         # TODO store this message in the context too
 
-        self.write_to_context_handlers(handler, message)
+        self.sender.write_to_context_handlers(handler, message)
 
     def write_thinking_message(self, handler: WebSocketHandler, thinking_mode: str, meta_data: dict = None):
         message = {
@@ -93,11 +96,11 @@ class WebSocket:
         if meta_data is not None:
             message["meta_data"] = meta_data
 
-        self.write_to_context_handlers(handler, message)
+        self.sender.write_to_context_handlers(handler, message)
 
     def write_suggestion_items(self, handler: WebSocketHandler, suggestion_items_response: dict, offset: int,
                                next_offset: int, ):
-        self.write_to_context_handlers(
+        self.sender.write_to_context_handlers(
             handler,
             {
                 "type": "suggestion_items",
@@ -109,7 +112,7 @@ class WebSocket:
         )
 
     def write_new_suggestion(self, handler: WebSocketHandler):
-        self.write_to_context_handlers(
+        self.sender.write_to_context_handlers(
             handler,
             {
                 "type": "new_suggestion",
@@ -135,7 +138,7 @@ class WebSocket:
             if "tiles" in image:
                 for tile in image["tiles"]:
                     if "width" in image and "height" in image:
-                        image_scale = "width" if image["width"] > image["height"] else "height"
+                        image_scale = "width" if image["width"] > image["height"]  else "height"
                     else:
                         image_scale = "width"
                     if tile["w"] == "w-md":
@@ -147,7 +150,7 @@ class WebSocket:
                         }
 
     def on_load_conversation_messages(self, handler: WebSocketHandler, message: dict):
-        self.write_to_context_handlers(
+        self.sender.write_to_context_handlers(
             handler,
             {
                 "type": "conversation_messages",
@@ -234,7 +237,7 @@ class WebSocket:
             detection_response = json_decode(response.body)
             detection_chat_response = self.detect.respond_to_detection_response(handler_callback, detection_response)
             if detection_chat_response is not None:
-                self.write_jemboo_response_message(handler_callback, detection_chat_response)
+                self.sender.write_jemboo_response_message(handler_callback, detection_chat_response)
 
             self.post_context_message(
                 handler_callback.context_id,
