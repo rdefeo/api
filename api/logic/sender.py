@@ -1,7 +1,6 @@
 import logging
-from api.settings import LOGGING_LEVEL
 
-__author__ = 'robdefeo'
+from api.settings import LOGGING_LEVEL
 from api.handlers.websocket import WebSocket as WebSocketHandler
 
 
