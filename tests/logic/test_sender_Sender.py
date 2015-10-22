@@ -10,7 +10,8 @@ __author__ = 'robdefeo'
 class write_jemboo_response_message(TestCase):
     def test_regular(self):
         target = Target("client_handlers_value")
-        target.write_to_context_handlers = Mock()
+        target.post_suggest_callback = Mock()
+
         target.context = Mock()
         handler = Mock()
         handler.context_id = "context_id_value"
@@ -28,3 +29,5 @@ class write_jemboo_response_message(TestCase):
         self.assertEqual("context_id_value", target.context.post_context_message.call_args_list[0][0][0])
         self.assertEqual(0, target.context.post_context_message.call_args_list[0][0][1])
         self.assertEqual("display_text_value", target.context.post_context_message.call_args_list[0][0][2])
+
+        # self.assertEqual(1, target.post_suggest_callback.call_count)

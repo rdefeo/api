@@ -7,6 +7,7 @@ from tornado.httpclient import HTTPClient, HTTPRequest, HTTPError, AsyncHTTPClie
 from api.content import Content
 from api.logic import DetectLogic
 from api.handlers.websocket import WebSocket as WebSocketHandler
+from api.logic.context import Context
 from api.logic.message_response import MessageResponse
 from api.logic.sender import Sender
 from api.settings import CONTEXT_URL, DETECT_URL, SUGGEST_URL, LOGGING_LEVEL, TILE_IMAGE_PATH
@@ -18,6 +19,7 @@ class WebSocket:
 
     def __init__(self, content: Content, client_handlers):
         self.sender = Sender(client_handlers)
+        self.context = Context()
         self.detect = DetectLogic(self.sender)
         self.message_response = MessageResponse()
         self._content = content
@@ -53,7 +55,7 @@ class WebSocket:
             def post_context_callback(response, handler):
                 self.logger.debug("post_context_message")
 
-            self.post_context_message(
+            self.context.post_context_message(
                 handler.context_id,
                 0,
                 "Hi, how can I help you?",
@@ -150,18 +152,24 @@ class WebSocket:
                         }
 
     def on_load_conversation_messages(self, handler: WebSocketHandler, message: dict):
-        self.sender.write_to_context_handlers(
+        self.context.get_context_messages(
             handler,
-            {
-                "type": "conversation_messages",
-                "messages": [
-                    {
-                        "direction": x["direction"],
-                        "display_text": x["text"]
-                    } for x in self.get_context_messages(handler)["messages"]
-                    ]
-            }
+            callback=lambda res: get_context_messages_callback(res, handler)
         )
+
+        def get_context_messages_callback(response, handler):
+            self.sender.write_to_context_handlers(
+                handler,
+                {
+                    "type": "conversation_messages",
+                    "messages": [
+                        {
+                            "direction": x["direction"],
+                            "display_text": x["text"]
+                        } for x in loads(response.body.decode("utf-8"))["messages"]
+                        ]
+                }
+            )
 
     def on_next_page_message(self, handler: WebSocketHandler, message: dict):
         self.get_suggestion_items(
@@ -239,7 +247,7 @@ class WebSocket:
             if detection_chat_response is not None:
                 self.sender.write_jemboo_response_message(handler_callback, detection_chat_response)
 
-            self.post_context_message(
+            self.context.post_context_message(
                 handler_callback.context_id,
                 1,
                 message["message_text"] if "message_text" in message else "",
@@ -310,21 +318,6 @@ class WebSocket:
             self.logger.error("get_context,url=%s", url)
             raise
 
-    def get_context_messages(self, handler: WebSocketHandler) -> dict:
-        try:
-            if handler.context is None or handler.context["_rev"] != handler.context_rev:
-                self.logger.debug(
-                    "get_context_from_service,context_id=%s,_rev=%s", str(handler.context_id), handler.context_rev)
-                http_client = HTTPClient()
-                url = "%s/%s/messages" % (CONTEXT_URL, str(handler.context_id))
-                context_message_response = http_client.fetch(HTTPRequest(url=url, method="GET"))
-                http_client.close()
-                return loads(context_message_response.body.decode("utf-8"))
-
-        except HTTPError as e:
-            self.logger.error("get_context,url=%s", url)
-            raise
-
     def post_context(self, user_id: str, application_id: str, session_id: str, locale: str) -> dict:
         self.logger.debug(
             "user_id=%s,application_id=%s,session_id=%s,locale=%s",
@@ -357,35 +350,35 @@ class WebSocket:
     #         message_text=message_text,
     #         callback=callback
     #     )
-
-    def post_context_message(self, context_id: str, direction: int, message_text: str, callback,
-                             detection: dict = None):
-        """
-        Direction is 1 user 0 jemboo
-        :type direction: int
-        """
-        self.logger.debug(
-            "context_id=%s,direction=%s,message_text=%s,detection=%s",
-            context_id, direction, message_text, detection
-        )
-        try:
-            request_body = {
-                "direction": direction,
-                "text": message_text
-            }
-            if detection is not None:
-                request_body["detection"] = detection
-
-            url = "%s/%s/messages/" % (CONTEXT_URL, context_id)
-            http_client = AsyncHTTPClient()
-            http_client.fetch(
-                HTTPRequest(url=url, method="POST", body=json_encode(request_body)),
-                callback=callback
-            )
-            http_client.close()
-        except HTTPError as e:
-            self.logger.error("post_context_message,url=%s", url)
-            raise
+    #
+    # def post_context_message(self, context_id: str, direction: int, message_text: str, callback,
+    #                          detection: dict = None):
+    #     """
+    #     Direction is 1 user 0 jemboo
+    #     :type direction: int
+    #     """
+    #     self.logger.debug(
+    #         "context_id=%s,direction=%s,message_text=%s,detection=%s",
+    #         context_id, direction, message_text, detection
+    #     )
+    #     try:
+    #         request_body = {
+    #             "direction": direction,
+    #             "text": message_text
+    #         }
+    #         if detection is not None:
+    #             request_body["detection"] = detection
+    #
+    #         url = "%s/%s/messages/" % (CONTEXT_URL, context_id)
+    #         http_client = AsyncHTTPClient()
+    #         http_client.fetch(
+    #             HTTPRequest(url=url, method="POST", body=json_encode(request_body)),
+    #             callback=callback
+    #         )
+    #         http_client.close()
+    #     except HTTPError as e:
+    #         self.logger.error("post_context_message,url=%s", url)
+    #         raise
 
     def post_context_feedback(self, context_id: str, user_id: str, application_id: str, session_id: str,
                               product_id: str, _type: str, meta_data: dict = None):

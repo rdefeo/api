@@ -23,10 +23,10 @@ class MessageResponse:
 
     def understood_all_entities_detection_response(self, understood_entities: list) -> dict:
         templates = [
-            "Ok, I found items matching %s.",
-            "This is what I found for %s."
-            "These should match %s."
-            "For %s I found all these for you."
+            "Ok, I found items matching {0}.",
+            "This is what I found for {0}.",
+            "These should match {0}.",
+            "For {0} I found all these for you."
         ]
         if any(understood_entities):
             understood_entities_text = ""
@@ -40,7 +40,7 @@ class MessageResponse:
                         understood_entities_text += "and %s" % x["key"]
 
             return {
-                "display_text": random.choice(templates) % understood_entities_text
+                "display_text": random.choice(templates).format(understood_entities_text)
             }
         else:
             return None

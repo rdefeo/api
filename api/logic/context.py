@@ -2,7 +2,7 @@ import logging
 
 from tornado.escape import json_encode
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest, HTTPError
-
+from api.handlers.websocket import WebSocket as WebSocketHandler
 from api.settings import LOGGING_LEVEL, CONTEXT_URL
 
 
@@ -10,8 +10,22 @@ class Context:
     logger = logging.getLogger(__name__)
     logger.setLevel(LOGGING_LEVEL)
 
-    def post_context_message(self, context_id: str, direction: int, message_text: str, callback,
-                             detection: dict = None):
+    def get_context_messages(self, handler: WebSocketHandler, callback) -> dict:
+        try:
+            if handler.context is None or handler.context["_rev"] != handler.context_rev:
+                self.logger.debug(
+                    "get_context_from_service,context_id=%s,_rev=%s", str(handler.context_id), handler.context_rev)
+                http_client = AsyncHTTPClient()
+                url = "%s/%s/messages" % (CONTEXT_URL, str(handler.context_id))
+                http_client.fetch(HTTPRequest(url=url, method="GET"), callback=callback)
+                http_client.close()
+
+        except HTTPError as e:
+            self.logger.error("get_context,url=%s", url)
+            raise
+
+    def post_context_message(
+            self, context_id: str, direction: int, message_text: str, callback, detection: dict = None):
         """
         Direction is 1 user 0 jemboo
         :type direction: int

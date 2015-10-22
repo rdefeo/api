@@ -1,6 +1,6 @@
 import logging
-from api.logic.context import Context
 
+from api.logic.context import Context
 from api.settings import LOGGING_LEVEL
 from api.handlers.websocket import WebSocket as WebSocketHandler
 
@@ -17,15 +17,16 @@ class Sender:
         message["type"] = "jemboo_chat_response"
         message["direction"] = 0  # jemboo
 
+        # TODO store this message in the context too
         self.context.post_context_message(
             handler.context_id,
             message["direction"],
             message["display_text"],
-            callback=lambda res: post_suggest_callback(res, handler, message)
+            callback=lambda res: self.post_suggest_callback(res, handler, message)
         )
 
-        def post_suggest_callback(response, handler: WebSocketHandler, message: dict):
-            self.write_to_context_handlers(handler, message)
+    def post_suggest_callback(self, response, handler: WebSocketHandler, message: dict):
+        self.write_to_context_handlers(handler, message)
 
     def write_to_context_handlers(self, handler: WebSocketHandler, message: dict):
         handlers = self._client_handlers[str(handler.context_id)].values()
