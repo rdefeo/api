@@ -1,10 +1,8 @@
 from collections import defaultdict
-from logging import DEBUG, getLogger, basicConfig
 
 import tornado
 import tornado.web
 import tornado.options
-
 from tornado.web import url
 
 from api.handlers.ask import Ask
@@ -21,8 +19,9 @@ client_handlers = defaultdict(dict)
 
 class Application(tornado.web.Application):
     def __init__(self):
-        from api.content import Content
-        product_cache = Content(4096)
+        from api.cache import ProductDetailCache, BrandSlugCache
+        product_cache = ProductDetailCache(4096)
+        brand_slug_cache = BrandSlugCache(4096)
         ask_logic = AskLogic(product_cache)
         # ws_logic = WebSocketLogic(product_cache)
 
@@ -34,7 +33,13 @@ class Application(tornado.web.Application):
             # /ws/context
             # /rs/context
             # /rs/context/messages
-            url(r"/websocket", WebSocket, dict(content=product_cache, client_handlers=client_handlers),
+            url(
+                r"/websocket",
+                WebSocket, dict(
+                    product_content=product_cache,
+                    brand_slug_cache=brand_slug_cache,
+                    client_handlers=client_handlers
+                ),
                 name="websocket"),
             url(r"/ask", Ask, dict(logic=ask_logic), name="ask"),
             url(r"/cache", Cache, dict(product_cache=product_cache), name="cache"),

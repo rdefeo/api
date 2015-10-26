@@ -20,9 +20,9 @@ class WebSocket(WebSocketHandler):
     offset = None
     page_size = None
 
-    def initialize(self, content, client_handlers):
+    def initialize(self, product_content, brand_slug_cache,  client_handlers):
         from api.logic.websocket import WebSocket as WebSocketLogic
-        self._logic = WebSocketLogic(content=content, client_handlers=client_handlers)
+        self._logic = WebSocketLogic(product_content=product_content, brand_slug_cache=brand_slug_cache, client_handlers=client_handlers)
         self._param_extractor = ParamExtractor(self)
 
     def check_origin(self, origin):

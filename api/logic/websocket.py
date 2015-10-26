@@ -4,12 +4,13 @@ from bson.json_util import dumps, loads
 from tornado.escape import json_decode, json_encode, url_escape
 from tornado.httpclient import HTTPClient, HTTPRequest, HTTPError, AsyncHTTPClient
 
-from api.content import Content
+from api.cache import ProductDetailCache
 from api.logic import DetectLogic
 from api.handlers.websocket import WebSocket as WebSocketHandler
 from api.logic.context import Context
 from api.logic.message_response import MessageResponse
 from api.logic.sender import Sender
+from api.logic.suggestions import Suggestions
 from api.settings import CONTEXT_URL, DETECT_URL, SUGGEST_URL, LOGGING_LEVEL, TILE_IMAGE_PATH
 
 
@@ -17,12 +18,12 @@ class WebSocket:
     logger = logging.getLogger(__name__)
     logger.setLevel(LOGGING_LEVEL)
 
-    def __init__(self, content: Content, client_handlers):
+    def __init__(self, product_content: ProductDetailCache, brand_slug_cache, client_handlers):
         self.sender = Sender(client_handlers)
         self.context = Context()
         self.detect = DetectLogic(self.sender)
         self.message_response = MessageResponse()
-        self._content = content
+        self.suggestions = Suggestions(product_content=product_content, brand_slug_cache=brand_slug_cache)
         self._client_handlers = client_handlers
 
     def open(self, handler: WebSocketHandler):
@@ -109,7 +110,7 @@ class WebSocket:
                 "next_offset": next_offset,
                 "offset": offset,
                 "suggest_id": str(handler.suggest_id),
-                "items": self.fill_suggestions(suggestion_items_response["items"])
+                "items": self.suggestions.fill(suggestion_items_response["items"])
             }
         )
 
@@ -122,34 +123,6 @@ class WebSocket:
             }
         )
 
-    def fill_suggestions(self, suggestions):
-        items = []
-        for suggestion in suggestions:
-            new_suggestion = self._content.get_product(suggestion["_id"])
-            if new_suggestion is not None:
-                new_suggestion["tile"] = self.get_tile(new_suggestion)
-                new_suggestion["score"] = suggestion["score"]
-                new_suggestion["reasons"] = suggestion["reasons"]
-                new_suggestion["_id"] = str(suggestion["_id"])
-                new_suggestion["position"] = suggestion["index"]
-                items.append(new_suggestion)
-        return items
-
-    def get_tile(self, suggestion):
-        for image in suggestion["images"]:
-            if "tiles" in image:
-                for tile in image["tiles"]:
-                    if "width" in image and "height" in image:
-                        image_scale = "width" if image["width"] > image["height"]  else "height"
-                    else:
-                        image_scale = "width"
-                    if tile["w"] == "w-md":
-                        return {
-                            "image_scale": image_scale,
-                            "colspan": 1,
-                            "rowspan": 1 if tile["h"] == "h-md" else 2,
-                            "image_url": "%s%s" % (TILE_IMAGE_PATH, tile["path"])
-                        }
 
     def on_load_conversation_messages(self, handler: WebSocketHandler, message: dict):
         self.context.get_context_messages(
