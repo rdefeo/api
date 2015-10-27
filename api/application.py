@@ -19,9 +19,8 @@ client_handlers = defaultdict(dict)
 
 class Application(tornado.web.Application):
     def __init__(self):
-        from api.cache import ProductDetailCache, BrandSlugCache
+        from api.cache import ProductDetailCache
         product_cache = ProductDetailCache(4096)
-        brand_slug_cache = BrandSlugCache(4096)
         ask_logic = AskLogic(product_cache)
         # ws_logic = WebSocketLogic(product_cache)
 
@@ -37,7 +36,6 @@ class Application(tornado.web.Application):
                 r"/websocket",
                 WebSocket, dict(
                     product_content=product_cache,
-                    brand_slug_cache=brand_slug_cache,
                     client_handlers=client_handlers
                 ),
                 name="websocket"),

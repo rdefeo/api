@@ -18,12 +18,12 @@ class WebSocket:
     logger = logging.getLogger(__name__)
     logger.setLevel(LOGGING_LEVEL)
 
-    def __init__(self, product_content: ProductDetailCache, brand_slug_cache, client_handlers):
+    def __init__(self, product_content: ProductDetailCache, client_handlers):
         self.sender = Sender(client_handlers)
         self.context = Context()
         self.detect = DetectLogic(self.sender)
         self.message_response = MessageResponse()
-        self.suggestions = Suggestions(product_content=product_content, brand_slug_cache=brand_slug_cache)
+        self.suggestions = Suggestions(product_content=product_content)
         self._client_handlers = client_handlers
 
     def open(self, handler: WebSocketHandler):
