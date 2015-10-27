@@ -6,4 +6,3 @@ pylru>=1.0.9
 pymongo>=3.0.3
 basehash
 python-slugify
-basehash
