@@ -19,6 +19,7 @@ class ProductDetail(Base):
             http_client.close()
             return {
                 "_id": data["_id"],
+                "sequence": data["sequence"] if "sequence" in data else None,
                 "title": data["title"],
                 "attributes": [x for x in data["attributes"] if
                                "key" not in x["_id"] or x["_id"]["key"] not in ["small sizes", "large sizes"]],

@@ -52,20 +52,17 @@ class Suggestions:
             ''
         )
         # TODO this can be removed pretty soon
-        if "sequence" in product:
-            if isinstance(product["sequence"],int):
-                sequence = product["sequence"]
-            else:
-                sequence = None
+        if isinstance(product["sequence"],int):
+            sequence = product["sequence"]
         else:
             sequence = None
-            
+
         if sequence is not None and brand_slug is not None and title_slug is not '':
             return "/%s/%s/%s~%s/" % (
                 geo,
                 slugify(brand, save_order=True),
                 title_slug,
-                sequence
+                self.base62hash.hash(sequence)
             )
         else:
             return "/%s/detail/%s/" % (geo, str(product["_id"]))
