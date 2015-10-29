@@ -13,7 +13,7 @@ from api.handlers.status import Status
 from api.handlers.cache import Cache
 from api.handlers.websocket import WebSocket
 from api.logic.ask import Ask as AskLogic
-
+from api.handlers import FacebookUserHandler
 client_handlers = defaultdict(dict)
 
 
@@ -44,8 +44,10 @@ class Application(tornado.web.Application):
             url(r"/chat", Chat, dict(logic=ask_logic), name="chat"),
             url(r"/feedback", Feedback, name="feedback"),
             url(r"/proxy.html", Proxy, name="proxy"),
-            url(r"/status", Status, name="status")
-            # url(r"/refresh", Refresh, name="refresh")
+            url(r"/status", Status, name="status"),
+            # USER SERVICE
+            url(r"/user/facebook", FacebookUserHandler, name="facebook_user")
+                # url(r"/refresh", Refresh, name="refresh")
         ]
 
         settings = dict(

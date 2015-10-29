@@ -2,6 +2,27 @@ from bson import ObjectId
 from bson.errors import InvalidId
 from tornado.escape import json_encode
 from tornado.web import RequestHandler, Finish
+from bson.json_util import loads
+
+
+class BodyExtractor:
+    def __init__(self, handler: RequestHandler):
+        self.handler = handler
+
+    def body(self) -> dict:
+        if any(self.handler.request.body_arguments):
+            return self.handler.request.body_arguments
+        else:
+            self.handler.set_status(412)
+            self.handler.finish(
+                json_encode(
+                    {
+                        "status": "error",
+                        "message": "invalid body,body=%s" % self.handler.request.body
+                    }
+                )
+            )
+            raise Finish()
 
 
 class ParamExtractor:

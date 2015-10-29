@@ -1,6 +1,5 @@
 import logging
 
-__author__ = 'robdefeo'
 import os
 
 
@@ -33,4 +32,3 @@ PRPROC_MONGODB_PORT = int(get_env_setting("PRPROC_MONGODB_PORT", 27017))
 PRPROC_MONGODB_DB = get_env_setting("PRPROC_MONGODB_DB", "product_processing")
 PRPROC_MONGODB_USER = get_env_setting("PRPROC_MONGODB_USER", "prproc")
 PRPROC_MONGODB_PASSWORD = get_env_setting("PRPROC_MONGODB_PASSWORD", "jemboo")
-
