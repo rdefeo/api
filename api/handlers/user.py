@@ -42,7 +42,13 @@ class Facebook(RequestHandler):
         self.set_status(201)
         self.set_header("Location", "/user/%s/" % (user["_id"]))
         self.set_header("_id", str(user["_id"]))
-        self.finish()
+        self.finish(
+            json_encode(
+                {
+                    "_id": str(user["_id"])
+                }
+            )
+        )
 
         if "facebook_user_data" not in user:
             facebook_user_data = graph.get("me/?fields=id,name,picture,first_name,last_name,age_range,link,locale,timezone,verified,email")
