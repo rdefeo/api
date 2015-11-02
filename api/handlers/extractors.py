@@ -1,6 +1,6 @@
 from bson import ObjectId
 from bson.errors import InvalidId
-from tornado.escape import json_encode
+from tornado.escape import json_encode, json_decode
 from tornado.web import RequestHandler, Finish
 from bson.json_util import loads
 
@@ -10,9 +10,9 @@ class BodyExtractor:
         self.handler = handler
 
     def body(self) -> dict:
-        if any(self.handler.request.body_arguments):
-            return self.handler.request.body_arguments
-        else:
+        try:
+            return json_decode(self.handler.request.body.decode("utf-8"))
+        except:
             self.handler.set_status(412)
             self.handler.finish(
                 json_encode(
@@ -23,6 +23,51 @@ class BodyExtractor:
                 )
             )
             raise Finish()
+
+    def authResponse(self) -> dict:
+        if "authResponse" not in self.body():
+            self.handler.set_status(412)
+            self.handler.finish(
+                json_encode(
+                    {
+                        "status": "error",
+                        "message": "missing,authResponse"
+                    }
+                )
+            )
+            raise Finish()
+        else:
+            return self.body()["authResponse"]
+
+    def user_id(self):
+        if "userID" not in self.authResponse():
+            self.handler.set_status(412)
+            self.handler.finish(
+                json_encode(
+                    {
+                        "status": "error",
+                        "message": "missing,authResponse[userID]"
+                    }
+                )
+            )
+            raise Finish()
+        else:
+            return self.authResponse()["userID"]
+
+    def access_token(self):
+        if "accessToken" not in self.authResponse():
+            self.handler.set_status(412)
+            self.handler.finish(
+                json_encode(
+                    {
+                        "status": "error",
+                        "message": "missing,authResponse[accessToken]"
+                    }
+                )
+            )
+            raise Finish()
+        else:
+            return self.authResponse()["accessToken"]
 
 
 class ParamExtractor:

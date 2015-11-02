@@ -27,36 +27,17 @@ class Facebook(RequestHandler):
         self._user_data.open_connection()
 
     @asynchronous
+    @asynchronous
+    @engine
+    def options(self, *args, **kwargs):
+        self.finish()
+
+    @asynchronous
     @engine
     def post(self, *args, **kwargs):
-        body = self._body_extractor.body()
-        if 'authResponse[userID]' not in body:
-            self.set_status(412)
-            self.finish(
-                json_encode(
-                    {
-                        "status": "error",
-                        "message": "missing,authResponse[userID]"
-                    }
-                )
-            )
-            raise Finish()
-
-        if 'authResponse[accessToken]' not in body:
-            self.set_status(412)
-            self.finish(
-                json_encode(
-                    {
-                        "status": "error",
-                        "message": "missing,authResponse[accessToken]"
-                    }
-                )
-            )
-            raise Finish()
-
-        access_token = body['authResponse[accessToken]'][0].decode("utf-8")
+        access_token = self._body_extractor.access_token()
         graph = GraphAPI(access_token)
-        facebook_user_id = body['authResponse[userID]'][0].decode("utf-8")
+        facebook_user_id = self._body_extractor.user_id()
         user = self._user_data.upsert_facebook(facebook_user_id=facebook_user_id)
         self.set_status(201)
         self.set_header("Location", "/user/%s/" % (user["_id"]))
