@@ -1,12 +1,26 @@
 from api.settings import TILE_IMAGE_PATH
 from slugify import slugify
 from prproc.url import create_product_url
-__author__ = 'robdefeo'
+from api.handlers.websocket import WebSocket as WebSocketHandler
 
 
 class Suggestions:
-    def __init__(self, product_content):
+    def __init__(self, product_content, sender):
         self._product_content = product_content
+        self._sender = sender
+
+    def write_suggestion_items(self, handler: WebSocketHandler, suggestion_items_response: dict, offset: int,
+                               next_offset: int, ):
+        self._sender.write_to_context_handlers(
+            handler,
+            {
+                "type": "suggestion_items",
+                "next_offset": next_offset,
+                "offset": offset,
+                "suggest_id": str(handler.suggest_id),
+                "items": self.fill(suggestion_items_response["items"])
+            }
+        )
 
     def fill(self, suggestions):
         items = []

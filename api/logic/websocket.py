@@ -23,7 +23,7 @@ class WebSocket:
         self.context = Context()
         self.detect = DetectLogic(self.sender)
         self.message_response = MessageResponse()
-        self.suggestions = Suggestions(product_content=product_content)
+        self.suggestions = Suggestions(product_content=product_content, sender=self.sender)
         self._client_handlers = client_handlers
 
     def open(self, handler: WebSocketHandler):
@@ -72,17 +72,6 @@ class WebSocket:
             )
             self._client_handlers[str(handler.context_id)].pop(handler.id, None)
 
-    # def write_to_context_handlers(self, handler: WebSocketHandler, message: dict):
-    #     handlers = self._client_handlers[str(handler.context_id)].values()
-    #     self.logger.info(
-    #         "write message context_id=%s,type=%s,handlers_length=%s",
-    #         str(handler.context_id), message["type"], len(handlers))
-    #     for x in handlers:
-    #         self.logger.info("write message context_id=%s,type=%s,handler_id=%s",
-    #                          str(handler.context_id), message["type"],
-    #                          x.id)
-    #         x.write_message(message)
-
     def write_jemboo_response_message(self, handler: WebSocketHandler, message: dict):
         message["type"] = "jemboo_chat_response"
         message["direction"] = 0  # jemboo
@@ -100,19 +89,6 @@ class WebSocket:
             message["meta_data"] = meta_data
 
         self.sender.write_to_context_handlers(handler, message)
-
-    def write_suggestion_items(self, handler: WebSocketHandler, suggestion_items_response: dict, offset: int,
-                               next_offset: int, ):
-        self.sender.write_to_context_handlers(
-            handler,
-            {
-                "type": "suggestion_items",
-                "next_offset": next_offset,
-                "offset": offset,
-                "suggest_id": str(handler.suggest_id),
-                "items": self.suggestions.fill(suggestion_items_response["items"])
-            }
-        )
 
     def write_new_suggestion(self, handler: WebSocketHandler):
         self.sender.write_to_context_handlers(
@@ -159,7 +135,7 @@ class WebSocket:
         def get_suggestion_items_callback(response, handler_callback: WebSocketHandler, message: dict):
             suggestion_items_response = loads(response.body.decode("utf-8"))
             next_offset = response.headers["next_offset"]
-            self.write_suggestion_items(handler, suggestion_items_response, message["offset"], next_offset)
+            self.suggestions.write_suggestion_items(handler, suggestion_items_response, message["offset"], next_offset)
 
     def on_view_product_details_message(self, handler: WebSocketHandler, message: dict):
         handler.context_rev = self.post_context_feedback(
@@ -205,7 +181,6 @@ class WebSocket:
         )
 
     def on_new_message_text(self, handler: WebSocketHandler, message: dict, new_message_text):
-
         def post_detect_callback(response, handler: WebSocketHandler, message: dict):
             self.logger.debug("post_detect_callback")
             self.get_detect(
@@ -216,10 +191,6 @@ class WebSocket:
         def get_detect_callback(response, handler_callback: WebSocketHandler, message: dict):
             self.logger.debug("get_detect_callback")
             detection_response = json_decode(response.body)
-            detection_chat_response = self.detect.respond_to_detection_response(handler_callback, detection_response)
-            if detection_chat_response is not None:
-                self.sender.write_jemboo_response_message(handler_callback, detection_chat_response)
-
             self.context.post_context_message(
                 handler_callback.context_id,
                 1,
@@ -227,6 +198,10 @@ class WebSocket:
                 lambda res: get_context_callback(res, handler_callback, message),
                 detection=detection_response
             )
+
+            detection_chat_response = self.detect.respond_to_detection_response(handler_callback, detection_response)
+            if detection_chat_response is not None:
+                self.sender.write_jemboo_response_message(handler_callback, detection_chat_response)
 
         def get_context_callback(response, handler_callback: WebSocketHandler, message: dict):
             self.logger.debug("get_context_callback")
@@ -314,44 +289,6 @@ class WebSocket:
             return response.headers["_id"], response.headers["_rev"]
         except HTTPError as e:
             raise
-
-    # def post_context_message_user(self, context_id: str, detection: dict, message_text: str, callback):
-    #     self.post_context_message(
-    #         context_id=context_id,
-    #         direction=1,
-    #         detection=detection,
-    #         message_text=message_text,
-    #         callback=callback
-    #     )
-    #
-    # def post_context_message(self, context_id: str, direction: int, message_text: str, callback,
-    #                          detection: dict = None):
-    #     """
-    #     Direction is 1 user 0 jemboo
-    #     :type direction: int
-    #     """
-    #     self.logger.debug(
-    #         "context_id=%s,direction=%s,message_text=%s,detection=%s",
-    #         context_id, direction, message_text, detection
-    #     )
-    #     try:
-    #         request_body = {
-    #             "direction": direction,
-    #             "text": message_text
-    #         }
-    #         if detection is not None:
-    #             request_body["detection"] = detection
-    #
-    #         url = "%s/%s/messages/" % (CONTEXT_URL, context_id)
-    #         http_client = AsyncHTTPClient()
-    #         http_client.fetch(
-    #             HTTPRequest(url=url, method="POST", body=json_encode(request_body)),
-    #             callback=callback
-    #         )
-    #         http_client.close()
-    #     except HTTPError as e:
-    #         self.logger.error("post_context_message,url=%s", url)
-    #         raise
 
     def post_context_feedback(self, context_id: str, user_id: str, application_id: str, session_id: str,
                               product_id: str, _type: str, meta_data: dict = None):
