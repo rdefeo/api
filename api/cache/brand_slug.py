@@ -1,8 +1,6 @@
-from datetime import datetime, timedelta
 from tornado.log import app_log
 from api.cache.base import Base
 from prproc.data import AttributeData
-__author__ = 'robdefeo'
 
 
 class BrandSlug(Base):
@@ -14,7 +12,7 @@ class BrandSlug(Base):
 
     def _get_from_service(self, key):
         try:
-            brand = self.attribute_data.get_by(_id_type="brand",_id_key=key)
+            brand = self.attribute_data.get_by(_id_type="brand", _id_key=key)
             if brand is not None:
                 return brand["slug"] if "slug" in brand else None
             else:

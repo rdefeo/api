@@ -5,25 +5,26 @@ from tornado.escape import json_decode, json_encode, url_escape
 from tornado.httpclient import HTTPClient, HTTPRequest, HTTPError, AsyncHTTPClient
 
 from api.cache import ProductDetailCache
-from api.logic import DetectLogic
+from api.logic import DetectLogic, UserLogic
 from api.handlers.websocket import WebSocket as WebSocketHandler
 from api.logic.context import Context
 from api.logic.message_response import MessageResponse
 from api.logic.sender import Sender
 from api.logic.suggestions import Suggestions
-from api.settings import CONTEXT_URL, DETECT_URL, SUGGEST_URL, LOGGING_LEVEL, TILE_IMAGE_PATH
+from api.settings import CONTEXT_URL, DETECT_URL, SUGGEST_URL, LOGGING_LEVEL
 
 
 class WebSocket:
     logger = logging.getLogger(__name__)
     logger.setLevel(LOGGING_LEVEL)
 
-    def __init__(self, product_content: ProductDetailCache, client_handlers):
+    def __init__(self, product_content: ProductDetailCache, client_handlers, user_info_cache):
         self.sender = Sender(client_handlers)
         self.context = Context()
         self.detect = DetectLogic(self.sender)
         self.message_response = MessageResponse()
         self.suggestions = Suggestions(product_content=product_content, sender=self.sender)
+        self.user = UserLogic(user_info_cache=user_info_cache)
         self._client_handlers = client_handlers
 
     def open(self, handler: WebSocketHandler):
@@ -99,7 +100,6 @@ class WebSocket:
             }
         )
 
-
     def on_load_conversation_messages(self, handler: WebSocketHandler, message: dict):
         self.context.get_context_messages(
             handler,
@@ -107,16 +107,23 @@ class WebSocket:
         )
 
         def get_context_messages_callback(response, handler):
+            profile_picture_url = self.user.get_profile_picture(handler.user_id)
+            messages = [
+                {
+                    "direction": x["direction"],
+                    "display_text": x["text"]
+                } for x in loads(response.body.decode("utf-8"))["messages"]
+                ]
+            if profile_picture_url is not None:
+                for x in messages:
+                    if x["direction"] == 1:  # user
+                        x["profile_picture_url"] = profile_picture_url
+
             self.sender.write_to_context_handlers(
                 handler,
                 {
                     "type": "conversation_messages",
-                    "messages": [
-                        {
-                            "direction": x["direction"],
-                            "display_text": x["text"]
-                        } for x in loads(response.body.decode("utf-8"))["messages"]
-                        ]
+                    "messages": messages
                 }
             )
 

@@ -1,4 +1,3 @@
-__author__ = 'robdefeo'
+from .product_detail import ProductDetail as ProductDetailCache
+from .user_info import UserInfo as UserInfoCache
 
-
-from .productdetail import ProductDetail as ProductDetailCache
