@@ -1,6 +1,8 @@
 from uuid import uuid4
+
 from tornado.websocket import WebSocketHandler
-from tornado.escape import json_decode, json_encode
+from tornado.escape import json_decode
+
 from api.handlers.extractors import ParamExtractor, WebSocketCookieExtractor
 
 
@@ -21,9 +23,10 @@ class WebSocket(WebSocketHandler):
     offset = None
     page_size = None
 
-    def initialize(self, product_content,  client_handlers, user_info_cache):
+    def initialize(self, product_content, client_handlers, user_info_cache):
         from api.logic.websocket import WebSocket as WebSocketLogic
-        self._logic = WebSocketLogic(product_content=product_content, client_handlers=client_handlers, user_info_cache=user_info_cache)
+        self._logic = WebSocketLogic(product_content=product_content, client_handlers=client_handlers,
+                                     user_info_cache=user_info_cache)
         self._param_extractor = ParamExtractor(self)
         self._cookie_extractor = WebSocketCookieExtractor(self)
 
@@ -44,6 +47,9 @@ class WebSocket(WebSocketHandler):
 
     def on_message(self, message):
         self._logic.on_message(self, json_decode(message))
+        if self.user_id is None:  # maybe they logged in
+            self.user_id = self._cookie_extractor.user_id()
+        
 
     def on_close(self):
         self._logic.on_close(self)
