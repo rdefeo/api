@@ -1,7 +1,10 @@
+from datetime import datetime
 import logging
 
 from tornado.escape import json_encode
+
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest, HTTPError
+import dateutil.parser
 from api.handlers.websocket import WebSocket as WebSocketHandler
 from api.settings import LOGGING_LEVEL, CONTEXT_URL
 
@@ -25,7 +28,7 @@ class Context:
             raise
 
     def post_context_message(
-            self, context_id: str, direction: int, message_text: str, callback, detection: dict = None):
+            self, context_id: str, direction: int, message_text: str, callback, detection: dict = None, now=None):
         """
         Direction is 1 user 0 jemboo
         :type direction: int
@@ -34,10 +37,12 @@ class Context:
             "context_id=%s,direction=%s,message_text=%s,detection=%s",
             context_id, direction, message_text, detection
         )
+        now = datetime.now() if now is None else now
         try:
             request_body = {
                 "direction": direction,
-                "text": message_text
+                "text": message_text,
+                "created": now.isoformat()
             }
             if detection is not None:
                 request_body["detection"] = detection
