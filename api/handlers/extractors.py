@@ -2,7 +2,20 @@ from bson import ObjectId
 from bson.errors import InvalidId
 from tornado.escape import json_encode, json_decode
 from tornado.web import RequestHandler, Finish
-from bson.json_util import loads
+from tornado.websocket import WebSocketHandler
+
+
+# class CookieExtractor:
+#     def __init__(self, handler: RequestHandler):
+#         self.handler = handler
+#
+#     def user_id(self) -> ObjectId:
+#         raw_user_id = self.handler.get_cookie("user_id", None)
+#         try:
+#             return ObjectId(raw_user_id) if raw_user_id is not None else None
+#         except InvalidId:
+#             self.handler.set_status(428, "invalid cookie=user_id,user_id=%s" % raw_user_id)
+#             raise Finish()
 
 
 class BodyExtractor:
@@ -39,21 +52,6 @@ class BodyExtractor:
         else:
             return self.body()["authResponse"]
 
-    def user_id(self):
-        if "userID" not in self.authResponse():
-            self.handler.set_status(412)
-            self.handler.finish(
-                json_encode(
-                    {
-                        "status": "error",
-                        "message": "missing,authResponse[userID]"
-                    }
-                )
-            )
-            raise Finish()
-        else:
-            return self.authResponse()["userID"]
-
     def access_token(self):
         if "accessToken" not in self.authResponse():
             self.handler.set_status(412)
@@ -70,6 +68,37 @@ class BodyExtractor:
             return self.authResponse()["accessToken"]
 
 
+class WebSocketCookieExtractor:
+    def __init__(self, handler: WebSocketHandler):
+        self._handler = handler
+
+    def application_id(self) -> ObjectId:
+        raw_application_id = self._handler.get_cookie("application_id", None)
+        if raw_application_id is None:
+            raise Exception("missing param(s) application_id")
+        try:
+            return ObjectId(raw_application_id)
+        except InvalidId:
+            raise Exception("missing param(s) application_id")
+
+    def session_id(self) -> ObjectId:
+        raw_session_id = self._handler.get_cookie("session_id", None)
+        if raw_session_id is None:
+            raise Exception("missing param(s) session_id")
+        try:
+            return ObjectId(raw_session_id)
+        except InvalidId:
+            raise Exception("missing param(s) session_id")
+
+    def user_id(self) -> ObjectId:
+        raw_user_id = self._handler.get_cookie("user_id", None)
+        try:
+            return ObjectId(raw_user_id) if raw_user_id is not None else None
+        except InvalidId:
+            raise Exception("missing param(s) user_id")
+
+
+
 class ParamExtractor:
     def __init__(self, handler: RequestHandler):
         self.handler = handler
@@ -78,15 +107,7 @@ class ParamExtractor:
     def session_id(self) -> ObjectId:
         raw_session_id = self.handler.get_argument("session_id", None)
         if raw_session_id is None:
-            self.handler.set_status(428)
-            self.handler.finish(
-                json_encode(
-                    {
-                        "status": "error",
-                        "message": "missing param(s) session_id"
-                    }
-                )
-            )
+            self.handler.set_status(428, "missing param(s) session_id")
             raise Finish()
 
         try:
@@ -106,7 +127,7 @@ class ParamExtractor:
     def application_id(self) -> ObjectId:
         raw_application_id = self.handler.get_argument("application_id", None)
         if raw_application_id is None:
-            self.handler.set_status(428)
+            self.handler.set_status(428, "missing param(s) application_id")
             self.handler.finish(
                 json_encode(
                     {
