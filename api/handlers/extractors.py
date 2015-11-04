@@ -37,6 +37,22 @@ class BodyExtractor:
             )
             raise Finish()
 
+    def user_id(self):
+        if "userID" not in self.authResponse():
+            self.handler.set_status(412)
+            self.handler.finish(
+                json_encode(
+                    {
+                        "status": "error",
+                        "message": "missing,authResponse[userID]"
+                    }
+                )
+            )
+            raise Finish()
+        else:
+            return self.authResponse()["userID"]
+
+
     def authResponse(self) -> dict:
         if "authResponse" not in self.body():
             self.handler.set_status(412)
