@@ -26,13 +26,6 @@ class Application(tornado.web.Application):
         # ws_logic = WebSocketLogic(product_cache)
 
         handlers = [
-            # /ws/product -> Push notifications etc
-            # /ws/ask
-            # /ws/ask -> Msg -> Conversation
-
-            # /ws/context
-            # /rs/context
-            # /rs/context/messages
             url(
                 r"/websocket",
                 WebSocket, dict(
@@ -53,8 +46,6 @@ class Application(tornado.web.Application):
         ]
 
         settings = dict(
-            # static_path = os.path.join(os.path.dirname(__file__), "static"),
-            # template_path = os.path.join(os.path.dirname(__file__), "templates"),
             debug=tornado.options.options.debug,
         )
         tornado.web.Application.__init__(self, handlers, **settings)

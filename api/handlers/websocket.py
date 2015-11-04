@@ -49,7 +49,6 @@ class WebSocket(WebSocketHandler):
         self._logic.on_message(self, json_decode(message))
         if self.user_id is None:  # maybe they logged in
             self.user_id = self._cookie_extractor.user_id()
-        
 
     def on_close(self):
         self._logic.on_close(self)
