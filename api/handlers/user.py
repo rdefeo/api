@@ -16,7 +16,7 @@ class Facebook(RequestHandler):
     _user_data = None
 
     def set_default_headers(self):
-        if ADD_CORS_HEADERS:
+        if True or ADD_CORS_HEADERS:
             self.set_header("Access-Control-Allow-Origin", "*")
             self.set_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
             self.set_header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept')
