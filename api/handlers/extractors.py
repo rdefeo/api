@@ -89,7 +89,7 @@ class WebSocketCookieExtractor:
         self._handler = handler
 
     def application_id(self) -> ObjectId:
-        raw_application_id = self._handler.request.get_cookie("application_id", None)
+        raw_application_id = self._handler.get_cookie("application_id", None)
         if raw_application_id is None:
             raise Exception("missing param(s) application_id")
         try:
@@ -98,7 +98,7 @@ class WebSocketCookieExtractor:
             raise Exception("missing param(s) application_id")
 
     def session_id(self) -> ObjectId:
-        raw_session_id = self._handler.request.get_cookie("session_id", None)
+        raw_session_id = self._handler.get_cookie("session_id", None)
         if raw_session_id is None:
             raise Exception("missing param(s) session_id")
         try:
@@ -107,7 +107,7 @@ class WebSocketCookieExtractor:
             raise Exception("missing param(s) session_id")
 
     def user_id(self) -> ObjectId:
-        raw_user_id = self._handler.request.get_cookie("user_id", None)
+        raw_user_id = self._handler.get_cookie("user_id", None)
         try:
             return ObjectId(raw_user_id) if raw_user_id is not None else None
         except InvalidId:
