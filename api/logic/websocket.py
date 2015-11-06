@@ -5,9 +5,8 @@ from tornado.escape import json_decode, json_encode, url_escape
 from tornado.httpclient import HTTPClient, HTTPRequest, HTTPError, AsyncHTTPClient
 
 from api.cache import ProductDetailCache
-from api.logic import DetectLogic, UserLogic
+from api.logic import DetectLogic, UserLogic, ContextLogic
 from api.handlers.websocket import WebSocket as WebSocketHandler
-from api.logic.context import Context
 from api.logic.message_response import MessageResponse
 from api.logic.sender import Sender
 from api.logic.suggestions import Suggestions
@@ -20,7 +19,7 @@ class WebSocket:
 
     def __init__(self, product_content: ProductDetailCache, client_handlers, user_info_cache):
         self.sender = Sender(client_handlers)
-        self.context = Context()
+        self.context = ContextLogic()
         self.detect = DetectLogic(self.sender)
         self.message_response = MessageResponse()
         self.suggestions = Suggestions(product_content=product_content, sender=self.sender)
@@ -144,6 +143,9 @@ class WebSocket:
             next_offset = response.headers["next_offset"]
             self.suggestions.write_suggestion_items(handler, suggestion_items_response, message["offset"], next_offset)
 
+    def on_favorite_product_save_message(self, handler: WebSocketHandler, message: dict):
+        self.user.put_favorite(handler, message["user_id"], message["product_id"])
+
     def on_view_product_details_message(self, handler: WebSocketHandler, message: dict):
         handler.context_rev = self.post_context_feedback(
             handler.context_id,
@@ -254,6 +256,8 @@ class WebSocket:
             self.on_view_product_details_message(handler, message)
         elif message["type"] == "load_conversation_messages":
             self.on_load_conversation_messages(handler, message)
+        elif message["type"] == "favorite_product_save":
+            self.on_favorite_product_save_message(handler, message)
         else:
             raise Exception("unknown message_type, type=%s,message=%s", message["type"], message)
         pass

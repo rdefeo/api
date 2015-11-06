@@ -13,7 +13,7 @@ from api.handlers.status import Status
 from api.handlers.cache import Cache
 from api.handlers.websocket import WebSocket
 from api.logic.ask import Ask as AskLogic
-from api.handlers import FacebookUserHandler
+from api.handlers import FacebookUserHandler, UserFavoriteHandler
 client_handlers = defaultdict(dict)
 
 
@@ -41,7 +41,8 @@ class Application(tornado.web.Application):
             url(r"/proxy.html", Proxy, name="proxy"),
             url(r"/status", Status, name="status"),
             # USER SERVICE
-            url(r"/user/facebook", FacebookUserHandler, name="facebook_user")
+            url(r"/user/facebook", FacebookUserHandler, name="facebook_user"),
+            url(r"/user/([0-9a-f]+)/favorite/([0-9a-f]+)", UserFavoriteHandler, name="favorite_user"),
                 # url(r"/refresh", Refresh, name="refresh")
         ]
 

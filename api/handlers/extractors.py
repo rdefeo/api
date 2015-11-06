@@ -18,71 +18,6 @@ from tornado.websocket import WebSocketHandler
 #             raise Finish()
 
 
-class BodyExtractor:
-    def __init__(self, handler: RequestHandler):
-        self.handler = handler
-
-    def body(self) -> dict:
-        try:
-            return json_decode(self.handler.request.body.decode("utf-8"))
-        except:
-            self.handler.set_status(412)
-            self.handler.finish(
-                json_encode(
-                    {
-                        "status": "error",
-                        "message": "invalid body,body=%s" % self.handler.request.body
-                    }
-                )
-            )
-            raise Finish()
-
-    def user_id(self):
-        if "userID" not in self.authResponse():
-            self.handler.set_status(412)
-            self.handler.finish(
-                json_encode(
-                    {
-                        "status": "error",
-                        "message": "missing,authResponse[userID]"
-                    }
-                )
-            )
-            raise Finish()
-        else:
-            return self.authResponse()["userID"]
-
-
-    def authResponse(self) -> dict:
-        if "authResponse" not in self.body():
-            self.handler.set_status(412)
-            self.handler.finish(
-                json_encode(
-                    {
-                        "status": "error",
-                        "message": "missing,authResponse"
-                    }
-                )
-            )
-            raise Finish()
-        else:
-            return self.body()["authResponse"]
-
-    def access_token(self):
-        if "accessToken" not in self.authResponse():
-            self.handler.set_status(412)
-            self.handler.finish(
-                json_encode(
-                    {
-                        "status": "error",
-                        "message": "missing,authResponse[accessToken]"
-                    }
-                )
-            )
-            raise Finish()
-        else:
-            return self.authResponse()["accessToken"]
-
 
 class WebSocketCookieExtractor:
     def __init__(self, handler: WebSocketHandler):
@@ -112,7 +47,6 @@ class WebSocketCookieExtractor:
             return ObjectId(raw_user_id) if raw_user_id is not None else None
         except InvalidId:
             raise Exception("missing param(s) user_id")
-
 
 
 class ParamExtractor:
