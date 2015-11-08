@@ -1,4 +1,5 @@
 import logging
+from bson import ObjectId
 
 from bson.json_util import dumps, loads
 from tornado.escape import json_decode, json_encode, url_escape
@@ -17,13 +18,13 @@ class WebSocket:
     logger = logging.getLogger(__name__)
     logger.setLevel(LOGGING_LEVEL)
 
-    def __init__(self, product_content: ProductDetailCache, client_handlers, user_info_cache):
+    def __init__(self, product_content: ProductDetailCache, client_handlers, user_info_cache, favorites_cache):
         self.sender = Sender(client_handlers)
         self.context = ContextLogic()
         self.detect = DetectLogic(self.sender)
         self.message_response = MessageResponse()
-        self.suggestions = Suggestions(product_content=product_content, sender=self.sender)
-        self.user = UserLogic(user_info_cache=user_info_cache)
+        self.suggestions = Suggestions(product_content=product_content, sender=self.sender, favorites_cache=favorites_cache)
+        self.user = UserLogic(user_info_cache=user_info_cache, favorites_cache=favorites_cache)
         self._client_handlers = client_handlers
 
     def open(self, handler: WebSocketHandler):
@@ -143,8 +144,11 @@ class WebSocket:
             next_offset = response.headers["next_offset"]
             self.suggestions.write_suggestion_items(handler, suggestion_items_response, message["offset"], next_offset)
 
+    def on_favorite_product_delete_message(self, handler: WebSocketHandler, message: dict):
+        self.user.delete_favorite(handler, ObjectId(message["user_id"]), ObjectId(message["product_id"]))
+
     def on_favorite_product_save_message(self, handler: WebSocketHandler, message: dict):
-        self.user.put_favorite(handler, message["user_id"], message["product_id"])
+        self.user.put_favorite(handler, ObjectId(message["user_id"]), ObjectId(message["product_id"]))
 
     def on_view_product_details_message(self, handler: WebSocketHandler, message: dict):
         handler.context_rev = self.post_context_feedback(
@@ -156,7 +160,6 @@ class WebSocket:
             message["feedback_type"],
             message["meta_data"] if "meta_data" in message else None
         )
-        pass
 
     def on_new_message(self, handler: WebSocketHandler, message: dict, new_conversation: bool = False):
         self.write_thinking_message(handler, "conversation")
@@ -258,6 +261,8 @@ class WebSocket:
             self.on_load_conversation_messages(handler, message)
         elif message["type"] == "favorite_product_save":
             self.on_favorite_product_save_message(handler, message)
+        elif message["type"] == "favorite_product_delete":
+            self.on_favorite_product_delete_message(handler, message)
         else:
             raise Exception("unknown message_type, type=%s,message=%s", message["type"], message)
         pass

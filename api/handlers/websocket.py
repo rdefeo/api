@@ -23,10 +23,14 @@ class WebSocket(WebSocketHandler):
     offset = None
     page_size = None
 
-    def initialize(self, product_content, client_handlers, user_info_cache):
+    def initialize(self, product_content, client_handlers, user_info_cache, favorites_cache):
         from api.logic.websocket import WebSocket as WebSocketLogic
-        self._logic = WebSocketLogic(product_content=product_content, client_handlers=client_handlers,
-                                     user_info_cache=user_info_cache)
+        self._logic = WebSocketLogic(
+            product_content=product_content,
+            client_handlers=client_handlers,
+            user_info_cache=user_info_cache,
+            favorites_cache=favorites_cache
+        )
         self._param_extractor = ParamExtractor(self)
         self._cookie_extractor = WebSocketCookieExtractor(self)
 

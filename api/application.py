@@ -13,15 +13,18 @@ from api.handlers.status import Status
 from api.handlers.cache import Cache
 from api.handlers.websocket import WebSocket
 from api.logic.ask import Ask as AskLogic
-from api.handlers import FacebookUserHandler, UserFavoriteHandler
+from api.handlers import FacebookUserHandler, UserFavoriteHandler, UserFavoritesHandler
+
 client_handlers = defaultdict(dict)
 
 
 class Application(tornado.web.Application):
     def __init__(self):
-        from api.cache import ProductDetailCache, UserInfoCache
+        from api.cache import ProductDetailCache, UserInfoCache, FavoritesCache
         product_cache = ProductDetailCache(4096)
         user_info_cache = UserInfoCache(1024)
+        favorites_cache = FavoritesCache(1024)
+
         ask_logic = AskLogic(product_cache)
         # ws_logic = WebSocketLogic(product_cache)
 
@@ -31,7 +34,8 @@ class Application(tornado.web.Application):
                 WebSocket, dict(
                     product_content=product_cache,
                     client_handlers=client_handlers,
-                    user_info_cache=user_info_cache
+                    user_info_cache=user_info_cache,
+                    favorites_cache=favorites_cache
                 ),
                 name="websocket"),
             url(r"/ask", Ask, dict(logic=ask_logic), name="ask"),
@@ -43,7 +47,8 @@ class Application(tornado.web.Application):
             # USER SERVICE
             url(r"/user/facebook", FacebookUserHandler, name="facebook_user"),
             url(r"/user/([0-9a-f]+)/favorite/([0-9a-f]+)", UserFavoriteHandler, name="favorite_user"),
-                # url(r"/refresh", Refresh, name="refresh")
+            url(r"/user/([0-9a-f]+)/favorites/", UserFavoritesHandler, name="favorites_user"),
+            # url(r"/refresh", Refresh, name="refresh")
         ]
 
         settings = dict(

@@ -19,6 +19,10 @@ class Base:
     def clear(self):
         self.cache.clear()
 
+    def remove(self, key):
+        if key in self.cache:
+            del self.cache[key]
+
     def get(self, key, now: datetime=None):
         now = datetime.now() if now is None else now
         if key in self.cache and self.cache[key][1].isoformat() > (now - timedelta(hours=8)).isoformat():
