@@ -13,6 +13,8 @@ from api.logic.sender import Sender
 from api.logic.suggestions import Suggestions
 from api.settings import CONTEXT_URL, DETECT_URL, SUGGEST_URL, LOGGING_LEVEL
 
+from api.logic.incoming_message_handlers import NextPageMessageHandler
+
 
 class WebSocket:
     logger = logging.getLogger(__name__)
@@ -25,7 +27,11 @@ class WebSocket:
         self.message_response = MessageResponse()
         self.suggestions = Suggestions(product_content=product_content, sender=self.sender, favorites_cache=favorites_cache)
         self.user = UserLogic(user_info_cache=user_info_cache, favorites_cache=favorites_cache)
+
+        self.next_page_message_handler = NextPageMessageHandler(self.suggestions)
+
         self._client_handlers = client_handlers
+
 
     def open(self, handler: WebSocketHandler):
         self.logger.debug(
@@ -40,6 +46,9 @@ class WebSocket:
             new_context = True
         else:
             new_context = False
+
+        if str(handler.context_id) not in self._client_handlers:
+            self._client_handlers[str(handler.context_id)] = {}
 
         if handler.id not in self._client_handlers[str(handler.context_id)]:
             self.logger.debug("add handler, context_id=%s,handler_id=%s", str(handler.context_id), handler.id)
@@ -127,22 +136,22 @@ class WebSocket:
                 }
             )
 
-    def on_next_page_message(self, handler: WebSocketHandler, message: dict):
-        self.get_suggestion_items(
-            handler.user_id,
-            handler.application_id,
-            handler.session_id,
-            handler.locale,
-            message["suggest_id"],
-            handler.page_size,
-            message["offset"],
-            callback=lambda res: get_suggestion_items_callback(res, handler, message)
-        )
-
-        def get_suggestion_items_callback(response, handler_callback: WebSocketHandler, message: dict):
-            suggestion_items_response = loads(response.body.decode("utf-8"))
-            next_offset = response.headers["next_offset"]
-            self.suggestions.write_suggestion_items(handler, suggestion_items_response, message["offset"], next_offset)
+    # def on_next_page_message(self, handler: WebSocketHandler, message: dict):
+    #     self.get_suggestion_items(
+    #         handler.user_id,
+    #         handler.application_id,
+    #         handler.session_id,
+    #         handler.locale,
+    #         message["suggest_id"],
+    #         handler.page_size,
+    #         message["offset"],
+    #         callback=lambda res: get_suggestion_items_callback(res, handler, message)
+    #     )
+    #
+    #     def get_suggestion_items_callback(response, handler_callback: WebSocketHandler, message: dict):
+    #         suggestion_items_response = loads(response.body.decode("utf-8"))
+    #         next_offset = response.headers["next_offset"]
+    #         self.suggestions.write_suggestion_items(handler, suggestion_items_response, message["offset"], next_offset)
 
     def on_favorite_product_delete_message(self, handler: WebSocketHandler, message: dict):
         self.user.delete_favorite(handler, ObjectId(message["user_id"]), ObjectId(message["product_id"]))
@@ -254,7 +263,7 @@ class WebSocket:
         elif message["type"] == "new_message":
             self.on_new_message(handler, message, new_conversation=False)
         elif message["type"] == "next_page":
-            self.on_next_page_message(handler, message)
+            self.next_page_message_handler.on_next_page_message(handler, message)
         elif message["type"] == "view_product_details":
             self.on_view_product_details_message(handler, message)
         elif message["type"] == "load_conversation_messages":
@@ -393,24 +402,24 @@ class WebSocket:
             self.logger.error("url=%s", url)
             raise
 
-    def get_suggestion_items(self, user_id: str, application_id: str, session_id: str, locale: str, suggestion_id: str,
-                             page_size: int, offset: int, callback):
-        self.logger.debug(
-            "user_id=%s,application_id=%s,session_id=%s,locale=%s,"
-            "suggestion_id=%s,page_size=%s,offset=%s",
-            user_id, application_id, session_id, locale, suggestion_id, page_size, offset
-        )
-        try:
-            http_client = AsyncHTTPClient()
-            url = "%s/%s/items?session_id=%s&application_id=%s&locale=%s&page_size=%s&offset=%s" % (
-                SUGGEST_URL, suggestion_id, session_id, application_id, locale, page_size, offset
-            )
-
-            url += "&user_id=%s" % user_id if user_id is not None else ""
-
-            http_client.fetch(HTTPRequest(url=url, method="GET"), callback=callback)
-            http_client.close()
-
-        except HTTPError as e:
-            self.logger.error("url=%s", url)
-            raise
+    # def get_suggestion_items(self, user_id: str, application_id: str, session_id: str, locale: str, suggestion_id: str,
+    #                          page_size: int, offset: int, callback):
+    #     self.logger.debug(
+    #         "user_id=%s,application_id=%s,session_id=%s,locale=%s,"
+    #         "suggestion_id=%s,page_size=%s,offset=%s",
+    #         user_id, application_id, session_id, locale, suggestion_id, page_size, offset
+    #     )
+    #     try:
+    #         http_client = AsyncHTTPClient()
+    #         url = "%s/%s/items?session_id=%s&application_id=%s&locale=%s&page_size=%s&offset=%s" % (
+    #             SUGGEST_URL, suggestion_id, session_id, application_id, locale, page_size, offset
+    #         )
+    #
+    #         url += "&user_id=%s" % user_id if user_id is not None else ""
+    #
+    #         http_client.fetch(HTTPRequest(url=url, method="GET"), callback=callback)
+    #         http_client.close()
+    #
+    #     except HTTPError as e:
+    #         self.logger.error("url=%s", url)
+    #         raise

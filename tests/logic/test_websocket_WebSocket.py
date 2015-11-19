@@ -7,35 +7,43 @@ from api.logic.websocket import WebSocket as Target
 
 class write_thinking_message(TestCase):
     def test_no_meta_data(self):
-        target = Target(None, None)
+        product_content = Mock()
+        client_handlers = {}
+        user_info_cache = Mock()
+        favorites_cache = Mock()
+        target = Target(product_content=product_content, client_handlers=client_handlers, user_info_cache=user_info_cache, favorites_cache=favorites_cache)
+        target.sender = Mock()
         handler = Mock()
-        target.write_to_context_handlers = Mock()
         target.write_thinking_message(handler, "mode_value", None)
 
-        self.assertEqual(1, target.write_to_context_handlers.call_count)
+        self.assertEqual(1, target.sender.write_to_context_handlers.call_count)
         self.assertEqual(
             handler,
-            target.write_to_context_handlers.call_args_list[0][0][0]
+            target.sender.write_to_context_handlers.call_args_list[0][0][0]
         )
         self.assertDictEqual(
             {'thinking_mode': 'mode_value', 'type': 'start_thinking'},
-            target.write_to_context_handlers.call_args_list[0][0][1]
+            target.sender.write_to_context_handlers.call_args_list[0][0][1]
         )
 
     def test_some_meta_data(self):
-        target = Target(None, None)
+        product_content = Mock()
+        client_handlers = {}
+        user_info_cache = Mock()
+        favorites_cache = Mock()
+        target = Target(product_content=product_content, client_handlers=client_handlers, user_info_cache=user_info_cache, favorites_cache=favorites_cache)
         handler = Mock()
-        target.write_to_context_handlers = Mock()
+        target.sender = Mock()
         target.write_thinking_message(handler, "mode_value", "meta_data_value")
 
-        self.assertEqual(1, target.write_to_context_handlers.call_count)
+        self.assertEqual(1, target.sender.write_to_context_handlers.call_count)
         self.assertEqual(
             handler,
-            target.write_to_context_handlers.call_args_list[0][0][0]
+            target.sender.write_to_context_handlers.call_args_list[0][0][0]
         )
         self.assertDictEqual(
             {'meta_data': 'meta_data_value', 'thinking_mode': 'mode_value', 'type': 'start_thinking'},
-            target.write_to_context_handlers.call_args_list[0][0][1]
+            target.sender.write_to_context_handlers.call_args_list[0][0][1]
         )
 
 
@@ -50,7 +58,11 @@ class on_view_product_details_message(TestCase):
         handler.suggest_id = "suggest_id_value"
         handler.context_rev = "old_rev"
 
-        target = Target(None, None)
+        product_content = Mock()
+        client_handlers = Mock()
+        user_info_cache = Mock()
+        favorites_cache = Mock()
+        target = Target(product_content=product_content, client_handlers=client_handlers, user_info_cache=user_info_cache, favorites_cache=favorites_cache)
         target.post_context_feedback = Mock(
             return_value="new_rev"
         )
@@ -77,117 +89,6 @@ class on_view_product_details_message(TestCase):
         self.assertEqual("new_rev", handler.context_rev)
 
 
-class fill_suggestions(TestCase):
-    def test_regular(self):
-        content = Mock()
-        content.get_product.side_effect = [
-            {
-                "_id": "new_suggestion_id_value_1"
-            },
-            {
-                "_id": "new_suggestion_id_value_2"
-            }
-        ]
-        target = Target(content, None)
-        target.get_tile = Mock(
-            side_effect=[
-                "tile_1",
-                "tile_2"
-            ]
-        )
-
-        actual = target.fill_suggestions(
-            [
-                {
-                    "_id": "_id_value_1",
-                    "score": "suggestion_score_1",
-                    "reasons": "suggestion_reasons_1",
-                    "index": "suggestion_index_1"
-                },
-                {
-                    "_id": "_id_value_2",
-                    "score": "suggestion_score_2",
-                    "reasons": "suggestion_reasons_2",
-                    "index": "suggestion_index_2"
-                }
-            ]
-        )
-        self.assertListEqual(
-            [{'_id': '_id_value_1', 'score': 'suggestion_score_1', 'tile': 'tile_1', 'position': 'suggestion_index_1',
-              'reasons': 'suggestion_reasons_1'},
-             {'_id': '_id_value_2', 'score': 'suggestion_score_2', 'tile': 'tile_2', 'position': 'suggestion_index_2',
-              'reasons': 'suggestion_reasons_2'}],
-            actual
-        )
-
-        self.assertEqual(2, target.get_tile.call_count)
-        self.assertDictEqual(
-            {
-                'position': 'suggestion_index_1', '_id': '_id_value_1', 'reasons': 'suggestion_reasons_1',
-                'score': 'suggestion_score_1', 'tile': 'tile_1'
-            },
-            target.get_tile.call_args_list[0][0][0]
-        )
-        self.assertDictEqual(
-            {
-                'position': 'suggestion_index_2', '_id': '_id_value_2', 'reasons': 'suggestion_reasons_2',
-                'score': 'suggestion_score_2', 'tile': 'tile_2'
-            },
-            target.get_tile.call_args_list[1][0][0]
-        )
-
-        self.assertEqual(2, content.get_product.call_count)
-        self.assertEqual('_id_value_1', content.get_product.call_args_list[0][0][0])
-        self.assertEqual('_id_value_2', content.get_product.call_args_list[1][0][0])
-
-
-class on_next_page_message(TestCase):
-    def test_regular(self):
-        handler = Mock(name="handler_value")
-        handler.context_id = "context_id_value"
-        handler.user_id = "user_id_value"
-        handler.application_id = "application_id_value"
-        handler.session_id = "session_id_value"
-        handler.locale = "locale_value"
-        handler.suggest_id = "suggest_id_value"
-        handler.page_size = "page_size_value"
-
-        target = Target(None, None)
-
-        target.get_suggestion_items = Mock(
-            return_value=("suggestions_items_value", "new_offset_value")
-        )
-
-        target.write_suggestion_items = Mock()
-        target.write_thinking_message = Mock()
-
-        target.on_next_page_message(
-            handler,
-            {
-                "suggest_id": "suggest_id_value",
-                "offset": "original_offset_value"
-            }
-        )
-
-        self.assertEqual(1, target.get_suggestion_items.call_count)
-        self.assertEqual("user_id_value", target.get_suggestion_items.call_args_list[0][0][0])
-        self.assertEqual("application_id_value", target.get_suggestion_items.call_args_list[0][0][1])
-        self.assertEqual("session_id_value", target.get_suggestion_items.call_args_list[0][0][2])
-        self.assertEqual("locale_value", target.get_suggestion_items.call_args_list[0][0][3])
-        self.assertEqual("suggest_id_value", target.get_suggestion_items.call_args_list[0][0][4])
-        self.assertEqual("page_size_value", target.get_suggestion_items.call_args_list[0][0][5])
-        self.assertEqual("original_offset_value", target.get_suggestion_items.call_args_list[0][0][6])
-
-        self.assertEqual("context_id_value", handler.context_id)
-        self.assertEqual("suggest_id_value", handler.suggest_id)
-
-        self.assertEqual(1, target.write_suggestion_items.call_count)
-        self.assertEqual(handler, target.write_suggestion_items.call_args_list[0][0][0])
-        self.assertEqual("suggestions_items_value", target.write_suggestion_items.call_args_list[0][0][1])
-
-        self.assertEqual(0, target.write_thinking_message.call_count)
-
-
 class on_new_message(TestCase):
     def test_no_message_no_detected_entities_in_context(self):
         handler = Mock(name="handler_value")
@@ -199,7 +100,11 @@ class on_new_message(TestCase):
         handler.skip_mongodb_log = "skip_mongodb_log_value"
         handler.page_size = "page_size_value"
 
-        target = Target(None, None)
+        product_content = Mock()
+        client_handlers = Mock()
+        user_info_cache = Mock()
+        favorites_cache = Mock()
+        target = Target(product_content=product_content, client_handlers=client_handlers, user_info_cache=user_info_cache, favorites_cache=favorites_cache)
         target.detect.respond_to_detection_response = Mock(
             return_value=None
         )
@@ -279,7 +184,11 @@ class on_new_message(TestCase):
         handler.skip_mongodb_log = "skip_mongodb_log_value"
         handler.page_size = "page_size_value"
 
-        target = Target(None, None)
+        product_content = Mock()
+        client_handlers = Mock()
+        user_info_cache = Mock()
+        favorites_cache = Mock()
+        target = Target(product_content=product_content, client_handlers=client_handlers, user_info_cache=user_info_cache, favorites_cache=favorites_cache)
         target.detect.respond_to_detection_response = Mock(
             return_value=None
         )
@@ -374,7 +283,11 @@ class on_new_message(TestCase):
 
 class on_message(TestCase):
     def test_no_message_type(self):
-        target = Target(None, None)
+        product_content = Mock()
+        client_handlers = Mock()
+        user_info_cache = Mock()
+        favorites_cache = Mock()
+        target = Target(product_content=product_content, client_handlers=client_handlers, user_info_cache=user_info_cache, favorites_cache=favorites_cache)
         target.on_new_message = Mock()
         target.on_next_page_message = Mock()
         target.on_view_product_details_message = Mock()
@@ -390,7 +303,11 @@ class on_message(TestCase):
         self.assertEqual(0, target.on_view_product_details_message.call_count)
 
     def test_unknown_message_type(self):
-        target = Target(None, None)
+        product_content = Mock()
+        client_handlers = Mock()
+        user_info_cache = Mock()
+        favorites_cache = Mock()
+        target = Target(product_content=product_content, client_handlers=client_handlers, user_info_cache=user_info_cache, favorites_cache=favorites_cache)
         target.on_new_message = Mock()
         target.on_next_page_message = Mock()
         target.on_view_product_details_message = Mock()
@@ -408,7 +325,11 @@ class on_message(TestCase):
         self.assertEqual(0, target.on_view_product_details_message.call_count)
 
     def test_home_page_message(self):
-        target = Target(None, None)
+        product_content = Mock()
+        client_handlers = Mock()
+        user_info_cache = Mock()
+        favorites_cache = Mock()
+        target = Target(product_content=product_content, client_handlers=client_handlers, user_info_cache=user_info_cache, favorites_cache=favorites_cache)
         target.on_new_message = Mock()
         target.on_next_page_message = Mock()
         target.on_view_product_details_message = Mock()
@@ -436,7 +357,11 @@ class on_message(TestCase):
         self.assertEqual(0, target.on_view_product_details_message.call_count)
 
     def test_new_message(self):
-        target = Target(None, None)
+        product_content = Mock()
+        client_handlers = Mock()
+        user_info_cache = Mock()
+        favorites_cache = Mock()
+        target = Target(product_content=product_content, client_handlers=client_handlers, user_info_cache=user_info_cache, favorites_cache=favorites_cache)
         target.on_new_message = Mock()
         target.on_next_page_message = Mock()
         target.on_view_product_details_message = Mock()
@@ -464,9 +389,13 @@ class on_message(TestCase):
         self.assertEqual(0, target.on_view_product_details_message.call_count)
 
     def test_next_page_message(self):
-        target = Target(None, None)
+        product_content = Mock()
+        client_handlers = Mock()
+        user_info_cache = Mock()
+        favorites_cache = Mock()
+        target = Target(product_content=product_content, client_handlers=client_handlers, user_info_cache=user_info_cache, favorites_cache=favorites_cache)
         target.on_new_message = Mock()
-        target.on_next_page_message = Mock()
+        target.next_page_message_handler = Mock()
         target.on_view_product_details_message = Mock()
 
         target.on_message(
@@ -477,19 +406,23 @@ class on_message(TestCase):
         )
 
         self.assertEqual(0, target.on_new_message.call_count)
-        self.assertEqual(1, target.on_next_page_message.call_count)
-        self.assertEqual("handler_value", target.on_next_page_message.call_args_list[0][0][0])
+        self.assertEqual(1, target.next_page_message_handler.on_next_page_message.call_count)
+        self.assertEqual("handler_value", target.next_page_message_handler.on_next_page_message.call_args_list[0][0][0])
         self.assertDictEqual(
             {
                 "type": "next_page"
             },
-            target.on_next_page_message.call_args_list[0][0][1]
+            target.next_page_message_handler.on_next_page_message.call_args_list[0][0][1]
         )
 
         self.assertEqual(0, target.on_view_product_details_message.call_count)
 
     def test_view_product_message(self):
-        target = Target(None, None)
+        product_content = Mock()
+        client_handlers = Mock()
+        user_info_cache = Mock()
+        favorites_cache = Mock()
+        target = Target(product_content=product_content, client_handlers=client_handlers, user_info_cache=user_info_cache, favorites_cache=favorites_cache)
         target.on_new_message = Mock()
         target.on_next_page_message = Mock()
         target.on_view_product_details_message = Mock()
@@ -524,9 +457,15 @@ class on_close(TestCase):
                 "random_handler_id": "random_handler"
             }
         }
+        product_content = Mock()
+        user_info_cache = Mock()
+        favorites_cache = Mock()
         target = Target(
-            content=None,
-            client_handlers=client_handlers
+            client_handlers=client_handlers,
+            product_content=product_content,
+            user_info_cache=user_info_cache,
+            favorites_cache=favorites_cache
+
         )
         handler = Mock(name="new_client_handler")
         handler.context_id = "existing_context_id"
@@ -545,9 +484,15 @@ class on_close(TestCase):
         client_handlers = {
             "random_id": "other_handler"
         }
+        product_content = Mock()
+        user_info_cache = Mock()
+        favorites_cache = Mock()
         target = Target(
-            content=None,
-            client_handlers=client_handlers
+            client_handlers=client_handlers,
+            product_content=product_content,
+            user_info_cache=user_info_cache,
+            favorites_cache=favorites_cache
+
         )
         handler = Mock(name="new_client_handler")
         handler.id = "existing_id"
@@ -561,17 +506,19 @@ class on_close(TestCase):
 
 class open_Tests(TestCase):
     def test_context_id_not_None(self):
-        target = Target(
-            content=None,
-            client_handlers={}
-        )
-        target.post_context = Mock()
+        product_content = Mock()
+        client_handlers = {}
+        user_info_cache = Mock()
+        favorites_cache = Mock()
+        target = Target(product_content=product_content, client_handlers=client_handlers, user_info_cache=user_info_cache, favorites_cache=favorites_cache)
+
         handler = Mock(name="new_client_handler")
         handler.id = "new_id"
         handler.context_id = "context_id_value"
         handler.context_rev = "context_rev_value"
 
         target.open(handler)
+        target.post_context = Mock()
 
         self.assertEqual(0, target.post_context.call_count)
 
@@ -585,10 +532,12 @@ class open_Tests(TestCase):
         )
 
     def test_context_id_None(self):
-        target = Target(
-            content=None,
-            client_handlers={}
-        )
+        product_content = Mock()
+        client_handlers = {}
+        user_info_cache = Mock()
+        favorites_cache = Mock()
+        target = Target(product_content=product_content, client_handlers=client_handlers, user_info_cache=user_info_cache, favorites_cache=favorites_cache)
+
         target.get_context = Mock()
         target.post_context = Mock(
             return_value=("context_id_value", "context_rev_value")
@@ -623,10 +572,10 @@ class open_Tests(TestCase):
         client_handlers = {
             "different_id": "existing_handler"
         }
-        target = Target(
-            content=None,
-            client_handlers=client_handlers
-        )
+        product_content = Mock()
+        user_info_cache = Mock()
+        favorites_cache = Mock()
+        target = Target(product_content=product_content, client_handlers=client_handlers, user_info_cache=user_info_cache, favorites_cache=favorites_cache)
         target.get_context = Mock(
             return_value="get_context_value"
         )
@@ -638,8 +587,9 @@ class open_Tests(TestCase):
 
         target.open(handler)
 
-        self.assertTrue("new_id" in client_handlers)
-        self.assertEqual("new_id", client_handlers["new_id"].id)
+        self.assertTrue("context_id" in client_handlers)
+        self.assertTrue("new_id" in client_handlers["context_id"])
+        self.assertEqual("new_id", client_handlers["context_id"]["new_id"].id)
         self.assertEqual("existing_handler", client_handlers["different_id"])
 
         self.assertEqual("context_id", handler.context_id)
@@ -657,11 +607,12 @@ class open_Tests(TestCase):
         client_handlers = {
             "existing_id": "existing_handler"
         }
+        product_content = Mock()
+        user_info_cache = Mock()
+        favorites_cache = Mock()
+        target = Target(product_content=product_content, client_handlers=client_handlers, user_info_cache=user_info_cache, favorites_cache=favorites_cache)
 
-        target = Target(
-            content=None,
-            client_handlers=client_handlers
-        )
+
         target.get_context = Mock(
             return_value="get_context_value"
         )

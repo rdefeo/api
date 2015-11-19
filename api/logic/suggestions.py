@@ -1,13 +1,20 @@
-from bson import ObjectId
+import logging
 
-from api.settings import TILE_IMAGE_PATH
-from prproc.url import create_product_url
+from bson import ObjectId
+from tornado.httpclient import AsyncHTTPClient, HTTPRequest, HTTPError
+
+from api.settings import TILE_IMAGE_PATH, SUGGEST_URL, LOGGING_LEVEL
 from api.handlers.websocket import WebSocket as WebSocketHandler
 from api.cache import FavoritesCache
 
 
 class Suggestions:
+    logger = logging.getLogger(__name__)
+    logger.setLevel(LOGGING_LEVEL)
+
     def __init__(self, product_content, favorites_cache: FavoritesCache, sender):
+        from prproc.url import create_product_url
+        self.create_product_url = create_product_url
         self._product_content = product_content
         self._favorites_cache = favorites_cache
         self._sender = sender
@@ -24,6 +31,28 @@ class Suggestions:
                 "items": self.fill(suggestion_items_response["items"], handler.user_id)
             }
         )
+
+    def get_suggestion_items(self, user_id: str, application_id: str, session_id: str, locale: str, suggestion_id: str,
+                             page_size: int, offset: int, callback):
+        self.logger.debug(
+            "user_id=%s,application_id=%s,session_id=%s,locale=%s,"
+            "suggestion_id=%s,page_size=%s,offset=%s",
+            user_id, application_id, session_id, locale, suggestion_id, page_size, offset
+        )
+        url = "%s/%s/items?session_id=%s&application_id=%s&locale=%s&page_size=%s&offset=%s" % (
+            SUGGEST_URL, suggestion_id, session_id, application_id, locale, page_size, offset
+        )
+        url += "&user_id=%s" % user_id if user_id is not None else ""
+
+        try:
+            http_client = AsyncHTTPClient()
+
+            http_client.fetch(HTTPRequest(url=url, method="GET"), callback=callback)
+            http_client.close()
+
+        except HTTPError:
+            self.logger.error("url=%s", url)
+            raise
 
     def fill(self, suggestions, user_id: ObjectId):
         if user_id is None:
@@ -44,19 +73,20 @@ class Suggestions:
                         "reasons": suggestion["reasons"],
                         "_id": str(product["_id"]),
                         "position": suggestion["index"],
-                        "url": create_product_url(product),
+                        "url": self.create_product_url(product),
                         "favorited": str(product["_id"]) in user_favorites
                     }
                 )
                 items.append(product)
         return items
 
-    def get_tile(self, suggestion):
+    @staticmethod
+    def get_tile(suggestion):
         for image in suggestion["images"]:
             if "tiles" in image:
                 for tile in image["tiles"]:
                     if "width" in image and "height" in image:
-                        image_scale = "width" if image["width"] > image["height"]  else "height"
+                        image_scale = "width" if image["width"] > image["height"] else "height"
                     else:
                         image_scale = "width"
                     if tile["w"] == "w-md":
