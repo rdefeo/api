@@ -1,23 +1,36 @@
 import logging
 
+from bson.json_util import dumps
+
 from bson import ObjectId
+
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest, HTTPError
 
 from api.settings import TILE_IMAGE_PATH, SUGGEST_URL, LOGGING_LEVEL
 from api.handlers.websocket import WebSocket as WebSocketHandler
 from api.cache import FavoritesCache
+from api.logic.sender import Sender as SenderLogic
 
 
 class Suggestions:
     logger = logging.getLogger(__name__)
     logger.setLevel(LOGGING_LEVEL)
 
-    def __init__(self, product_content, favorites_cache: FavoritesCache, sender):
+    def __init__(self, product_content, favorites_cache: FavoritesCache, sender: SenderLogic):
         from prproc.url import create_product_url
         self.create_product_url = create_product_url
         self._product_content = product_content
         self._favorites_cache = favorites_cache
         self._sender = sender
+
+    def write_new_suggestion(self, handler: WebSocketHandler):
+        self._sender.write_to_context_handlers(
+            handler,
+            {
+                "type": "new_suggestion",
+                "suggest_id": str(handler.suggest_id)
+            }
+        )
 
     def write_suggestion_items(self, handler: WebSocketHandler, suggestion_items_response: dict, offset: int,
                                next_offset: int):
@@ -48,6 +61,32 @@ class Suggestions:
             http_client = AsyncHTTPClient()
 
             http_client.fetch(HTTPRequest(url=url, method="GET"), callback=callback)
+            http_client.close()
+
+        except HTTPError:
+            self.logger.error("url=%s", url)
+            raise
+
+    def post_suggest(self, user_id: str, application_id: str, session_id: str, locale: str, context: dict,
+                     callback) -> str:
+        self.logger.debug(
+            "user_id=%s,application_id=%s,session_id=%s,locale=%s,"
+            "context=%s",
+            user_id, application_id, session_id, locale, context
+        )
+
+        url = "%s?session_id=%s&application_id=%s&locale=%s" % (
+            SUGGEST_URL, session_id, application_id, locale
+        )
+        url += "&user_id=%s" % user_id if user_id is not None else ""
+
+        try:
+            request_body = {
+                "context": context
+            }
+
+            http_client = AsyncHTTPClient()
+            http_client.fetch(HTTPRequest(url=url, body=dumps(request_body), method="POST"), callback=callback)
             http_client.close()
 
         except HTTPError:

@@ -13,6 +13,21 @@ class Context:
     logger = logging.getLogger(__name__)
     logger.setLevel(LOGGING_LEVEL)
 
+    def get_context(self, handler: WebSocketHandler, callback):
+        try:
+            if handler.context is None or handler.context["_rev"] != handler.context_rev:
+                self.logger.debug(
+                    "get_context_from_service,context_id=%s,_rev=%s", str(handler.context_id), handler.context_rev)
+                url = "%s/%s" % (CONTEXT_URL, str(handler.context_id))
+                url += "?_rev=%s" % handler.context_rev if handler.context_rev is not None else ""
+                http_client = AsyncHTTPClient()
+                http_client.fetch(HTTPRequest(url=url, method="GET"), callback=callback)
+                http_client.close()
+
+        except HTTPError as e:
+            self.logger.error("get_context,url=%s", url)
+            raise
+
     def get_context_messages(self, handler: WebSocketHandler, callback) -> dict:
         try:
             if handler.context is None or handler.context["_rev"] != handler.context_rev:

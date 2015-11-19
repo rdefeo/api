@@ -7,6 +7,43 @@ from api.logic.sender import Sender as Target
 __author__ = 'robdefeo'
 
 
+class write_thinking_message(TestCase):
+    def test_no_meta_data(self):
+        client_handlers = {}
+        target = Target(client_handlers=client_handlers)
+        target.write_to_context_handlers = Mock()
+        handler = Mock()
+        target.write_thinking_message(handler, "mode_value", None)
+
+        self.assertEqual(1, target.write_to_context_handlers.call_count)
+        self.assertEqual(
+            handler,
+            target.write_to_context_handlers.call_args_list[0][0][0]
+        )
+        self.assertDictEqual(
+            {'thinking_mode': 'mode_value', 'type': 'start_thinking'},
+            target.write_to_context_handlers.call_args_list[0][0][1]
+        )
+
+    def test_some_meta_data(self):
+        client_handlers = {}
+        target = Target(client_handlers=client_handlers)
+        handler = Mock()
+        target.write_to_context_handlers = Mock()
+        target.write_thinking_message(handler, "mode_value", "meta_data_value")
+
+        self.assertEqual(1, target.write_to_context_handlers.call_count)
+        self.assertEqual(
+            handler,
+            target.write_to_context_handlers.call_args_list[0][0][0]
+        )
+        self.assertDictEqual(
+            {'meta_data': 'meta_data_value', 'thinking_mode': 'mode_value', 'type': 'start_thinking'},
+            target.write_to_context_handlers.call_args_list[0][0][1]
+        )
+
+
+
 class write_jemboo_response_message(TestCase):
     def test_regular(self):
         target = Target("client_handlers_value")

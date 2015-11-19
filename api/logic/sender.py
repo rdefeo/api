@@ -13,6 +13,17 @@ class Sender:
         self._client_handlers = client_handlers
         self.context = Context()
 
+    def write_thinking_message(self, handler: WebSocketHandler, thinking_mode: str, meta_data: dict = None):
+        message = {
+            "type": "start_thinking",
+            "thinking_mode": thinking_mode
+        }
+
+        if meta_data is not None:
+            message["meta_data"] = meta_data
+
+        self.write_to_context_handlers(handler, message)
+
     def write_jemboo_response_message(self, handler: WebSocketHandler, message: dict):
         message["type"] = "jemboo_chat_response"
         message["direction"] = 0  # jemboo

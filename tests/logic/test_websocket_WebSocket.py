@@ -1,50 +1,8 @@
 from unittest import TestCase
 
-from mock import Mock
+from mock import Mock, MagicMock
 
 from api.logic.websocket import WebSocket as Target
-
-
-class write_thinking_message(TestCase):
-    def test_no_meta_data(self):
-        product_content = Mock()
-        client_handlers = {}
-        user_info_cache = Mock()
-        favorites_cache = Mock()
-        target = Target(product_content=product_content, client_handlers=client_handlers, user_info_cache=user_info_cache, favorites_cache=favorites_cache)
-        target.sender = Mock()
-        handler = Mock()
-        target.write_thinking_message(handler, "mode_value", None)
-
-        self.assertEqual(1, target.sender.write_to_context_handlers.call_count)
-        self.assertEqual(
-            handler,
-            target.sender.write_to_context_handlers.call_args_list[0][0][0]
-        )
-        self.assertDictEqual(
-            {'thinking_mode': 'mode_value', 'type': 'start_thinking'},
-            target.sender.write_to_context_handlers.call_args_list[0][0][1]
-        )
-
-    def test_some_meta_data(self):
-        product_content = Mock()
-        client_handlers = {}
-        user_info_cache = Mock()
-        favorites_cache = Mock()
-        target = Target(product_content=product_content, client_handlers=client_handlers, user_info_cache=user_info_cache, favorites_cache=favorites_cache)
-        handler = Mock()
-        target.sender = Mock()
-        target.write_thinking_message(handler, "mode_value", "meta_data_value")
-
-        self.assertEqual(1, target.sender.write_to_context_handlers.call_count)
-        self.assertEqual(
-            handler,
-            target.sender.write_to_context_handlers.call_args_list[0][0][0]
-        )
-        self.assertDictEqual(
-            {'meta_data': 'meta_data_value', 'thinking_mode': 'mode_value', 'type': 'start_thinking'},
-            target.sender.write_to_context_handlers.call_args_list[0][0][1]
-        )
 
 
 class on_view_product_details_message(TestCase):
@@ -87,198 +45,6 @@ class on_view_product_details_message(TestCase):
         self.assertEqual("context_id_value", handler.context_id)
         self.assertEqual("suggest_id_value", handler.suggest_id)
         self.assertEqual("new_rev", handler.context_rev)
-
-
-class on_new_message(TestCase):
-    def test_no_message_no_detected_entities_in_context(self):
-        handler = Mock(name="handler_value")
-        handler.context_id = "context_id_value"
-        handler.user_id = "user_id_value"
-        handler.application_id = "application_id_value"
-        handler.session_id = "session_id_value"
-        handler.locale = "locale_value"
-        handler.skip_mongodb_log = "skip_mongodb_log_value"
-        handler.page_size = "page_size_value"
-
-        product_content = Mock()
-        client_handlers = Mock()
-        user_info_cache = Mock()
-        favorites_cache = Mock()
-        target = Target(product_content=product_content, client_handlers=client_handlers, user_info_cache=user_info_cache, favorites_cache=favorites_cache)
-        target.detect.respond_to_detection_response = Mock(
-            return_value=None
-        )
-
-        target.get_context = Mock(
-            return_value={
-                "entities": [
-                    {
-                        "source": "non_detection"
-                    }
-                ]
-            }
-        )
-
-        target.post_suggest = Mock(
-            return_value="suggest_id_value"
-        )
-
-        target.get_suggestion_items = Mock(
-            return_value=("suggestions_items_value", "offset_value")
-        )
-
-        target.write_suggestion_items = Mock()
-        target.write_thinking_message = Mock()
-
-        target.on_new_message(
-            handler,
-            {
-                "message_text": ""
-            }
-        )
-
-        self.assertEqual(1, target.get_context.call_count)
-
-        self.assertEqual(handler, target.get_context.call_args_list[0][0][0])
-
-        self.assertEqual(1, target.post_suggest.call_count)
-        self.assertEqual("user_id_value", target.post_suggest.call_args_list[0][0][0])
-        self.assertEqual("application_id_value", target.post_suggest.call_args_list[0][0][1])
-        self.assertEqual("session_id_value", target.post_suggest.call_args_list[0][0][2])
-        self.assertEqual("locale_value", target.post_suggest.call_args_list[0][0][3])
-        self.assertDictEqual(
-            {'entities': [{'source': 'non_detection'}]},
-            target.post_suggest.call_args_list[0][0][4]
-        )
-
-        self.assertEqual(1, target.get_suggestion_items.call_count)
-        self.assertEqual("user_id_value", target.get_suggestion_items.call_args_list[0][0][0])
-        self.assertEqual("application_id_value", target.get_suggestion_items.call_args_list[0][0][1])
-        self.assertEqual("session_id_value", target.get_suggestion_items.call_args_list[0][0][2])
-        self.assertEqual("locale_value", target.get_suggestion_items.call_args_list[0][0][3])
-        self.assertEqual("suggest_id_value", target.get_suggestion_items.call_args_list[0][0][4])
-        self.assertEqual("page_size_value", target.get_suggestion_items.call_args_list[0][0][5])
-        self.assertEqual(0, target.get_suggestion_items.call_args_list[0][0][6])
-
-        self.assertEqual("context_id_value", handler.context_id)
-        self.assertEqual("suggest_id_value", handler.suggest_id)
-
-        self.assertEqual(1, target.write_suggestion_items.call_count)
-        self.assertEqual(handler, target.write_suggestion_items.call_args_list[0][0][0])
-        self.assertEqual("suggestions_items_value", target.write_suggestion_items.call_args_list[0][0][1])
-
-        self.assertEqual(2, target.write_thinking_message.call_count)
-        self.assertEqual(handler, target.write_thinking_message.call_args_list[0][0][0])
-        self.assertEqual("conversation", target.write_thinking_message.call_args_list[0][0][1])
-
-        self.assertEqual(handler, target.write_thinking_message.call_args_list[1][0][0])
-        self.assertEqual("suggestions", target.write_thinking_message.call_args_list[1][0][1])
-
-    def test_no_non_detections(self):
-        handler = Mock(name="handler_value")
-        handler.context_id = "context_id_value"
-        handler.user_id = "user_id_value"
-        handler.application_id = "application_id_value"
-        handler.session_id = "session_id_value"
-        handler.locale = "locale_value"
-        handler.skip_mongodb_log = "skip_mongodb_log_value"
-        handler.page_size = "page_size_value"
-
-        product_content = Mock()
-        client_handlers = Mock()
-        user_info_cache = Mock()
-        favorites_cache = Mock()
-        target = Target(product_content=product_content, client_handlers=client_handlers, user_info_cache=user_info_cache, favorites_cache=favorites_cache)
-        target.detect.respond_to_detection_response = Mock(
-            return_value=None
-        )
-
-        target.post_detect = Mock(
-            return_value="detection_location_response"
-        )
-        target.get_detect = Mock(
-            return_value="detection_response"
-        )
-        target.post_context_message_user = Mock(
-            return_value="post_context_message_user_context_rev"
-        )
-
-        target.get_context = Mock(
-            return_value="context_value"
-        )
-
-        target.post_suggest = Mock(
-            return_value="suggest_id_value"
-        )
-
-        target.get_suggestion_items = Mock(
-            return_value=("suggestions_items_value", "offset_value")
-        )
-
-        target.write_suggestion_items = Mock()
-        target.write_thinking_message = Mock()
-
-        target.on_new_message(
-            handler,
-            {
-                "message_text": "message_text_value"
-            }
-        )
-
-        self.assertEqual(1, target.post_detect.call_count)
-        self.assertEqual("user_id_value", target.post_detect.call_args_list[0][0][0])
-        self.assertEqual("application_id_value", target.post_detect.call_args_list[0][0][1])
-        self.assertEqual("session_id_value", target.post_detect.call_args_list[0][0][2])
-        self.assertEqual("locale_value", target.post_detect.call_args_list[0][0][3])
-        self.assertEqual("message_text_value", target.post_detect.call_args_list[0][0][4])
-
-        self.assertEqual(1, target.get_detect.call_count)
-
-        self.assertEqual("detection_location_response", target.get_detect.call_args_list[0][0][0])
-
-        self.assertEqual(1, target.detect.respond_to_detection_response.call_count)
-        self.assertEqual(handler, target.detect.respond_to_detection_response.call_args_list[0][0][0])
-        self.assertEqual("detection_response", target.detect.respond_to_detection_response.call_args_list[0][0][1])
-
-        self.assertEqual(1, target.post_context_message_user.call_count)
-        self.assertEqual("context_id_value", target.post_context_message_user.call_args_list[0][0][0])
-        self.assertEqual("detection_response", target.post_context_message_user.call_args_list[0][0][1])
-        self.assertEqual("message_text_value", target.post_context_message_user.call_args_list[0][0][2])
-
-        self.assertEqual(1, target.get_context.call_count)
-
-        self.assertEqual(handler, target.get_context.call_args_list[0][0][0])
-
-        self.assertEqual(1, target.post_suggest.call_count)
-        self.assertEqual("user_id_value", target.post_suggest.call_args_list[0][0][0])
-        self.assertEqual("application_id_value", target.post_suggest.call_args_list[0][0][1])
-        self.assertEqual("session_id_value", target.post_suggest.call_args_list[0][0][2])
-        self.assertEqual("locale_value", target.post_suggest.call_args_list[0][0][3])
-        self.assertEqual("context_value", target.post_suggest.call_args_list[0][0][4])
-
-        self.assertEqual(1, target.get_suggestion_items.call_count)
-        self.assertEqual("user_id_value", target.get_suggestion_items.call_args_list[0][0][0])
-        self.assertEqual("application_id_value", target.get_suggestion_items.call_args_list[0][0][1])
-        self.assertEqual("session_id_value", target.get_suggestion_items.call_args_list[0][0][2])
-        self.assertEqual("locale_value", target.get_suggestion_items.call_args_list[0][0][3])
-        self.assertEqual("suggest_id_value", target.get_suggestion_items.call_args_list[0][0][4])
-        self.assertEqual("page_size_value", target.get_suggestion_items.call_args_list[0][0][5])
-        self.assertEqual(0, target.get_suggestion_items.call_args_list[0][0][6])
-
-        self.assertEqual("context_id_value", handler.context_id)
-        self.assertEqual("post_context_message_user_context_rev", handler.context_rev)
-        self.assertEqual("suggest_id_value", handler.suggest_id)
-
-        self.assertEqual(1, target.write_suggestion_items.call_count)
-        self.assertEqual(handler, target.write_suggestion_items.call_args_list[0][0][0])
-        self.assertEqual("suggestions_items_value", target.write_suggestion_items.call_args_list[0][0][1])
-
-        self.assertEqual(2, target.write_thinking_message.call_count)
-        self.assertEqual(handler, target.write_thinking_message.call_args_list[0][0][0])
-        self.assertEqual("conversation", target.write_thinking_message.call_args_list[0][0][1])
-
-        self.assertEqual(handler, target.write_thinking_message.call_args_list[1][0][0])
-        self.assertEqual("suggestions", target.write_thinking_message.call_args_list[1][0][1])
 
 
 class on_message(TestCase):
@@ -330,7 +96,7 @@ class on_message(TestCase):
         user_info_cache = Mock()
         favorites_cache = Mock()
         target = Target(product_content=product_content, client_handlers=client_handlers, user_info_cache=user_info_cache, favorites_cache=favorites_cache)
-        target.on_new_message = Mock()
+        target.new_message_handler = MagicMock()
         target.on_next_page_message = Mock()
         target.on_view_product_details_message = Mock()
 
@@ -341,17 +107,7 @@ class on_message(TestCase):
             }
         )
 
-        self.assertEqual(1, target.on_new_message.call_count)
-        self.assertEqual("handler_value", target.on_new_message.call_args_list[0][0][0])
-        self.assertDictEqual(
-            {
-                "type": "home_page_message"
-            },
-            target.on_new_message.call_args_list[0][0][1]
-        )
-        self.assertTrue(
-            target.on_new_message.call_args_list[0][1]["new_conversation"]
-        )
+        target.new_message_handler.on_new_message.assert_called_once_with('handler_value', {'type': 'home_page_message'}, new_conversation=True)
 
         self.assertEqual(0, target.on_next_page_message.call_count)
         self.assertEqual(0, target.on_view_product_details_message.call_count)
@@ -362,7 +118,7 @@ class on_message(TestCase):
         user_info_cache = Mock()
         favorites_cache = Mock()
         target = Target(product_content=product_content, client_handlers=client_handlers, user_info_cache=user_info_cache, favorites_cache=favorites_cache)
-        target.on_new_message = Mock()
+        target.new_message_handler = MagicMock()
         target.on_next_page_message = Mock()
         target.on_view_product_details_message = Mock()
 
@@ -373,17 +129,7 @@ class on_message(TestCase):
             }
         )
 
-        self.assertEqual(1, target.on_new_message.call_count)
-        self.assertEqual("handler_value", target.on_new_message.call_args_list[0][0][0])
-        self.assertDictEqual(
-            {
-                "type": "new_message"
-            },
-            target.on_new_message.call_args_list[0][0][1]
-        )
-        self.assertFalse(
-            target.on_new_message.call_args_list[0][1]["new_conversation"]
-        )
+        target.new_message_handler.on_new_message.assert_called_once_with('handler_value', {'type': 'new_message'}, new_conversation=False)
 
         self.assertEqual(0, target.on_next_page_message.call_count)
         self.assertEqual(0, target.on_view_product_details_message.call_count)
