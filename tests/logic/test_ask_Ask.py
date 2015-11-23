@@ -1,7 +1,8 @@
 from unittest import TestCase
+
 from mock import Mock
+
 from api.logic.ask import Ask as Target
-__author__ = 'robdefeo'
 
 
 class do_Tests(TestCase):

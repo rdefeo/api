@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from mock import Mock
+from mock import Mock, MagicMock
 
 from api.logic.incoming_message_handlers import NextPageMessageHandler as Target
 
@@ -17,7 +17,8 @@ class on_next_page_message(TestCase):
         handler.page_size = "page_size_value"
 
         suggestions = Mock()
-        target = Target(suggestions)
+        sender = MagicMock()
+        target = Target(suggestions, sender)
 
         target.on_next_page_message(
             handler,
@@ -38,3 +39,25 @@ class on_next_page_message(TestCase):
 
         self.assertEqual("context_id_value", handler.context_id)
         self.assertEqual("suggest_id_value", handler.suggest_id)
+
+
+class get_suggestion_items_callback(TestCase):
+    def test_regular(self):
+        suggestions = MagicMock()
+
+        sender = MagicMock()
+        target = Target(suggestions, sender)
+        target.bson_json_decode_and_load = MagicMock(return_value="decoded_response")
+        target.suggest_responder.suggestion_items = MagicMock()
+
+        response = MagicMock()
+        response.body = "response_body"
+        response.headers = {"next_offset": "next_offset_value"}
+
+        target.get_suggestion_items_callback(response, "handler", {'offset': "offset_value"})
+
+        target.bson_json_decode_and_load.assert_called_once_with('response_body')
+        suggestions.write_suggestion_items.assert_called_once_with('handler', 'decoded_response', "offset_value",
+                                                                   "next_offset_value")
+        target.suggest_responder.suggestion_items.assert_called_once_with('handler', {'offset': 'offset_value'},
+                                                                          'decoded_response')

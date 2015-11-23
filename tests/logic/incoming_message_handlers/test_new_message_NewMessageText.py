@@ -52,7 +52,7 @@ class get_detect_callback(TestCase):
         context = MagicMock()
         suggest = Mock()
         target = Target(sender, detect, context, suggest)
-        target.decode_response = MagicMock(return_value="decode_detection_response")
+        target.json_decode = MagicMock(return_value="decode_detection_response")
 
         response = Mock()
         response.body = "response_body"
@@ -62,7 +62,7 @@ class get_detect_callback(TestCase):
 
         target.get_detect_callback(response, handler, "message_value")
 
-        target.decode_response.assert_called_once_with("response_body")
+        target.json_decode.assert_called_once_with("response_body")
 
         # context.post_context_message.assert_called_once_with("context_id_value", 1, "", dection="decode_detection_response")
 
@@ -83,7 +83,7 @@ class get_detect_callback(TestCase):
         context = MagicMock()
         suggest = Mock()
         target = Target(sender, detect, context, suggest)
-        target.decode_response = MagicMock(return_value="decode_detection_response")
+        target.json_decode = MagicMock(return_value="decode_detection_response")
 
         response = Mock()
         response.body = "response_body"
@@ -93,7 +93,7 @@ class get_detect_callback(TestCase):
 
         target.get_detect_callback(response, handler, "message_value")
 
-        target.decode_response.assert_called_once_with("response_body")
+        target.json_decode.assert_called_once_with("response_body")
 
         # context.post_context_message.assert_called_once_with("context_id_value", 1, "", dection="decode_detection_response")
 
@@ -116,7 +116,7 @@ class get_context_callback(TestCase):
         suggest = Mock()
         target = Target(sender, detect, context, suggest)
 
-        target.get_context_callback("response_value", "handler_value", "message_value")
+        target.post_context_message_callback("response_value", "handler_value", "message_value")
 
         self.assertEqual(1, context.get_context.call_count)
         self.assertEqual("handler_value", context.get_context.call_args_list[0][0][0])
@@ -129,7 +129,8 @@ class post_context_message_user_callback(TestCase):
         context = MagicMock()
         suggest = Mock()
         target = Target(sender, detect, context, suggest)
-        target.decode_response = MagicMock(return_value={"_rev": "context_revision_value"})
+        target.json_decode = MagicMock(return_value={"_rev": "context_revision_value"})
+        target.context_responder.unsupported_entities = MagicMock()
 
         response = Mock()
         response.body = "response_body_value"
@@ -140,9 +141,12 @@ class post_context_message_user_callback(TestCase):
         handler.session_id = "session_id_value"
         handler.locale = "locale_value"
 
-        target.post_context_message_user_callback(response, handler, "message_value")
+        target.get_context_callback(response, handler, "message_value")
 
-        target.decode_response.assert_called_once_with("response_body_value")
+        target.json_decode.assert_called_once_with("response_body_value")
+
+        target.context_responder.unsupported_entities.assert_called_once_with(handler,
+                                                                              {'_rev': 'context_revision_value'})
 
         self.assertEqual(1, suggest.post_suggest.call_count)
         self.assertEqual("user_id_value", suggest.post_suggest.call_args_list[0][0][0])
@@ -159,7 +163,7 @@ class post_suggest_callback(TestCase):
         context = MagicMock()
         suggest = MagicMock()
         target = Target(sender, detect, context, suggest)
-        target.decode_response = MagicMock(return_value={"_rev": "context_revision_value"})
+        target.json_decode = MagicMock(return_value={"_rev": "context_revision_value"})
 
         response = Mock()
         response.headers = {"_id": "suggest_id_value"}

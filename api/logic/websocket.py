@@ -1,18 +1,17 @@
 import logging
-from bson import ObjectId
 
+from bson import ObjectId
 from bson.json_util import dumps, loads
-from tornado.escape import json_decode, json_encode, url_escape
-from tornado.httpclient import HTTPClient, HTTPRequest, HTTPError, AsyncHTTPClient
+from tornado.escape import json_encode
+
+from tornado.httpclient import HTTPClient, HTTPRequest, HTTPError
 
 from api.cache import ProductDetailCache
 from api.logic import DetectLogic, UserLogic, ContextLogic
 from api.handlers.websocket import WebSocket as WebSocketHandler
-from api.logic.message_response import MessageResponse
 from api.logic.sender import Sender
 from api.logic.suggestions import Suggestions
-from api.settings import CONTEXT_URL, DETECT_URL, SUGGEST_URL, LOGGING_LEVEL
-
+from api.settings import CONTEXT_URL, LOGGING_LEVEL
 from api.logic.incoming_message_handlers import NextPageMessageHandler, NewMessageHandler
 
 
@@ -24,15 +23,14 @@ class WebSocket:
         self.sender = Sender(client_handlers)
         self.context = ContextLogic()
         self.detect = DetectLogic(self.sender)
-        self.message_response = MessageResponse()
-        self.suggestions = Suggestions(product_content=product_content, sender=self.sender, favorites_cache=favorites_cache)
+        self.suggestions = Suggestions(product_content=product_content, sender=self.sender,
+                                       favorites_cache=favorites_cache)
         self.user = UserLogic(user_info_cache=user_info_cache, favorites_cache=favorites_cache)
 
-        self.next_page_message_handler = NextPageMessageHandler(self.suggestions)
+        self.next_page_message_handler = NextPageMessageHandler(self.suggestions, self.sender)
         self.new_message_handler = NewMessageHandler(self.sender, self.detect, self.context, self.suggestions)
 
         self._client_handlers = client_handlers
-
 
     def open(self, handler: WebSocketHandler):
         self.logger.debug(
@@ -215,56 +213,56 @@ class WebSocket:
             response = http_client.fetch(HTTPRequest(url=url, body=dumps(request_body), method="POST"))
             http_client.close()
             return response.headers["_rev"]
-        except HTTPError as e:
+        except HTTPError:
             self.logger.error("post_context_feedback,url=%s", url)
             raise
 
 
-    # def post_suggest(self, user_id: str, application_id: str, session_id: str, locale: str, context: dict,
-    #                  callback) -> str:
-    #     self.logger.debug(
-    #         "user_id=%s,application_id=%s,session_id=%s,locale=%s,"
-    #         "context=%s",
-    #         user_id, application_id, session_id, locale, context
-    #     )
-    #
-    #     try:
-    #         request_body = {
-    #             "context": context
-    #         }
-    #
-    #         url = "%s?session_id=%s&application_id=%s&locale=%s" % (
-    #             SUGGEST_URL, session_id, application_id, locale
-    #         )
-    #
-    #         url += "&user_id=%s" % user_id if user_id is not None else ""
-    #
-    #         http_client = AsyncHTTPClient()
-    #         http_client.fetch(HTTPRequest(url=url, body=dumps(request_body), method="POST"), callback=callback)
-    #         http_client.close()
-    #
-    #     except HTTPError as e:
-    #         self.logger.error("url=%s", url)
-    #         raise
+            # def post_suggest(self, user_id: str, application_id: str, session_id: str, locale: str, context: dict,
+            #                  callback) -> str:
+            #     self.logger.debug(
+            #         "user_id=%s,application_id=%s,session_id=%s,locale=%s,"
+            #         "context=%s",
+            #         user_id, application_id, session_id, locale, context
+            #     )
+            #
+            #     try:
+            #         request_body = {
+            #             "context": context
+            #         }
+            #
+            #         url = "%s?session_id=%s&application_id=%s&locale=%s" % (
+            #             SUGGEST_URL, session_id, application_id, locale
+            #         )
+            #
+            #         url += "&user_id=%s" % user_id if user_id is not None else ""
+            #
+            #         http_client = AsyncHTTPClient()
+            #         http_client.fetch(HTTPRequest(url=url, body=dumps(request_body), method="POST"), callback=callback)
+            #         http_client.close()
+            #
+            #     except HTTPError as e:
+            #         self.logger.error("url=%s", url)
+            #         raise
 
-    # def get_suggestion_items(self, user_id: str, application_id: str, session_id: str, locale: str, suggestion_id: str,
-    #                          page_size: int, offset: int, callback):
-    #     self.logger.debug(
-    #         "user_id=%s,application_id=%s,session_id=%s,locale=%s,"
-    #         "suggestion_id=%s,page_size=%s,offset=%s",
-    #         user_id, application_id, session_id, locale, suggestion_id, page_size, offset
-    #     )
-    #     try:
-    #         http_client = AsyncHTTPClient()
-    #         url = "%s/%s/items?session_id=%s&application_id=%s&locale=%s&page_size=%s&offset=%s" % (
-    #             SUGGEST_URL, suggestion_id, session_id, application_id, locale, page_size, offset
-    #         )
-    #
-    #         url += "&user_id=%s" % user_id if user_id is not None else ""
-    #
-    #         http_client.fetch(HTTPRequest(url=url, method="GET"), callback=callback)
-    #         http_client.close()
-    #
-    #     except HTTPError as e:
-    #         self.logger.error("url=%s", url)
-    #         raise
+            # def get_suggestion_items(self, user_id: str, application_id: str, session_id: str, locale: str, suggestion_id: str,
+            #                          page_size: int, offset: int, callback):
+            #     self.logger.debug(
+            #         "user_id=%s,application_id=%s,session_id=%s,locale=%s,"
+            #         "suggestion_id=%s,page_size=%s,offset=%s",
+            #         user_id, application_id, session_id, locale, suggestion_id, page_size, offset
+            #     )
+            #     try:
+            #         http_client = AsyncHTTPClient()
+            #         url = "%s/%s/items?session_id=%s&application_id=%s&locale=%s&page_size=%s&offset=%s" % (
+            #             SUGGEST_URL, suggestion_id, session_id, application_id, locale, page_size, offset
+            #         )
+            #
+            #         url += "&user_id=%s" % user_id if user_id is not None else ""
+            #
+            #         http_client.fetch(HTTPRequest(url=url, method="GET"), callback=callback)
+            #         http_client.close()
+            #
+            #     except HTTPError as e:
+            #         self.logger.error("url=%s", url)
+            #         raise

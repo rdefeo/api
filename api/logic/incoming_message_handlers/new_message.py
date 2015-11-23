@@ -4,7 +4,9 @@ from tornado.escape import json_decode
 
 from api.handlers.websocket import WebSocket as WebSocketHandler
 from api.logic import SenderLogic, DetectLogic, ContextLogic, SuggestLogic
+from api.logic.incoming_message_handlers.message_handler import MessageHandler
 from api.settings import LOGGING_LEVEL
+from api.logic.responders import ContextResponder
 
 
 class NewMessage:
@@ -26,7 +28,7 @@ class NewMessage:
             self.new_message_empty_handler.on_new_message_empty(handler, message)
 
 
-class NewMessageText:
+class NewMessageText(MessageHandler):
     logger = logging.getLogger(__name__)
     logger.setLevel(LOGGING_LEVEL)
 
@@ -35,6 +37,7 @@ class NewMessageText:
         self.detect = detect
         self.context = context
         self.suggest = suggest
+        self.context_responder = ContextResponder(sender)
 
     def on_new_message_text(self, handler: WebSocketHandler, message: dict, new_message_text):
         self.detect.post_detect(
@@ -49,18 +52,15 @@ class NewMessageText:
             lambda res: self.get_detect_callback(res, handler, message)
         )
 
-    def decode_response(self, body):
-        return json_decode(body)
-
     def get_detect_callback(self, response, handler_callback: WebSocketHandler, message: dict):
         self.logger.debug("get_detect_callback")
-        detection_response = self.decode_response(response.body)
+        detection_response = self.json_decode(response.body)
 
         self.context.post_context_message(
             handler_callback.context_id,
             1,
             message["message_text"] if "message_text" in message else "",
-            callback=lambda res: self.get_context_callback(res, handler_callback, message),
+            callback=lambda res: self.post_context_message_callback(res, handler_callback, message),
             detection=detection_response
         )
 
@@ -68,17 +68,20 @@ class NewMessageText:
         if detection_chat_response is not None:
             self.sender.write_jemboo_response_message(handler_callback, detection_chat_response)
 
-    def get_context_callback(self, response, handler_callback: WebSocketHandler, message: dict):
-        self.logger.debug("get_context_callback")
+    def post_context_message_callback(self, response, handler_callback: WebSocketHandler, message: dict):
+        self.logger.debug("post_context_message_callback")
         self.context.get_context(
             handler_callback,
-            lambda res: self.post_context_message_user_callback(res, handler_callback, message)
+            lambda res: self.get_context_callback(res, handler_callback, message)
         )
 
-    def post_context_message_user_callback(self, response, handler: WebSocketHandler, message: dict):
-        self.logger.debug("post_context_message_user_callback")
-        handler.context = self.decode_response(response.body)
+    def get_context_callback(self, response, handler: WebSocketHandler, message: dict):
+        self.logger.debug("get_context_callback")
+        handler.context = self.json_decode(response.body)
         handler.context_rev = handler.context["_rev"]
+
+        self.context_responder.unsupported_entities(handler, handler.context)
+
         self.suggest.post_suggest(
             handler.user_id,
             handler.application_id,
@@ -94,7 +97,7 @@ class NewMessageText:
         self.suggest.write_new_suggestion(handler)
 
 
-class NewMessageEmpty:
+class NewMessageEmpty(MessageHandler):
     def __init__(self, sender: SenderLogic, context: ContextLogic, suggest: SuggestLogic):
         self.sender = sender
         self.context = context
@@ -107,11 +110,15 @@ class NewMessageEmpty:
         )
 
     def get_context_callback(self, response, handler: WebSocketHandler, message: dict):
-        handler.context = json_decode(response.body)
+        handler.context = self.json_decode(response.body)
         handler.context_rev = handler.context["_rev"]
         if not any(x for x in handler.context["entities"] if x["source"] == "detection"):
             handler.suggest_id = self.suggest.post_suggest(
-                handler.user_id, handler.application_id, handler.session_id, handler.locale, handler.context,
+                handler.user_id,
+                handler.application_id,
+                handler.session_id,
+                handler.locale,
+                handler.context,
                 callback=lambda res: self.post_suggest_callback(res, handler, message)
             )
         else:
@@ -121,4 +128,3 @@ class NewMessageEmpty:
     def post_suggest_callback(self, response, handler: WebSocketHandler, message: dict):
         handler.suggest_id = response.headers["_id"]
         self.suggest.write_new_suggestion(handler)
-

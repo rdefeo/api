@@ -1,11 +1,10 @@
 import logging
 
 from tornado.escape import url_escape, json_encode
-
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest, HTTPError
 
 from api.handlers.websocket import WebSocket as WebSocketHandler
-from api.logic.message_response import MessageResponse
+from api.logic.responders import DetectResponder
 from api.logic.sender import Sender
 from api.settings import DETECT_URL, LOGGING_LEVEL
 
@@ -15,7 +14,7 @@ class Detect:
     logger.setLevel(LOGGING_LEVEL)
 
     def __init__(self, sender: Sender):
-        self.message_response = MessageResponse()
+        self.responder = DetectResponder(sender)
         self.sender = sender
 
     def get_detect(self, location: str, callback) -> dict:
@@ -67,19 +66,9 @@ class Detect:
     def respond_to_detection_response(self, handler: WebSocketHandler, detection_response: dict):
         # TODO 25 non detected items
         unknown_entities = list(self.unknown_entities(detection_response["outcomes"]))
-        unknown_entities_response = self.message_response.unknown_entities_detection_response(unknown_entities)
-        if unknown_entities_response is not None:
-            self.sender.write_jemboo_response_message(handler, unknown_entities_response)
-        else:
-            known_entities_response = self.message_response.understood_all_entities_detection_response(
+        unknown_entities_response = self.responder.unknown_entities_detection_response(handler, unknown_entities)
+        if unknown_entities_response is None:
+            self.responder.understood_all_entities_detection_response(
+                handler,
                 list(self.understood_entities(detection_response["outcomes"]))
             )
-            if known_entities_response is not None:
-                self.sender.write_jemboo_response_message(handler, known_entities_response)
-
-                # for outcome in detection_response["outcomes"]:
-                #     # then check concept
-                #     if outcome["confidence"] < 50.0:
-                #         # its got no idea
-                #         break
-                # pass
