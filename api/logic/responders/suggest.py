@@ -11,7 +11,7 @@ class SuggestResponder:
             pass
             return
 
-        if message["offset"] == 40:
+        if int(message["offset"]) == 40:
             # its a couple of pages in so nows a good time to ask a follow up question probably generic for now
             self.sender.write_jemboo_response_message(
                 handler,
